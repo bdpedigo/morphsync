@@ -3,11 +3,11 @@ from .integration import import_pyvista
 
 
 class Mesh(FacetFrame):
-    def __init__(self, input):
+    def __init__(self, input, **kwargs):
         if hasattr(input, "vertices") and hasattr(input, "faces"):
-            super().__init__(input.vertices, input.faces)
-            # self.vertices = input.vertices
-            # self.faces = input.faces
+            super().__init__(input.vertices, input.faces, **kwargs)
+        elif isinstance(input, tuple):
+            super().__init__(input[0], input[1], **kwargs)
         else:
             raise NotImplementedError(
                 "Only accepts objects with 'vertices' and 'faces' attributes"
@@ -15,7 +15,7 @@ class Mesh(FacetFrame):
 
     @property
     def faces(self):
-        return self.facets.values
+        return self.facets_positional
 
     def __str__(self):
         return f"Mesh(vertices={self.vertices.shape}, faces={self.faces.shape})"

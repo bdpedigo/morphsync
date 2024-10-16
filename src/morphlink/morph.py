@@ -19,11 +19,25 @@ class MorphLink:
         self._tables = {}
 
     def __repr__(self):
-        return f"MorphLink(layers={self._layers.keys()}, links={self._links.keys()}, tables={self._tables.keys()})"
+        return f"MorphLink(layers={list(self._layers.keys())}, links={list(self._links.keys())}, tables={list(self._tables.keys())})"
+
+    @property
+    def layer_names(self):
+        return list(self._layers.keys())
+
+    @property
+    def layer_types(self):
+        return {name: layer.__class__ for name, layer in self._layers.items()}
 
     def _add_layer(self, layer, name):
         self._layers[name] = layer
         self.__setattr__(name, layer)
+
+    def drop_layer(self, name):
+        if name in self._layers:
+            del self._layers[name]
+            delattr(self, name)
+            # TODO delete links
 
     def add_mesh(self, mesh, name) -> None:
         native_mesh = mesh
@@ -126,6 +140,13 @@ class MorphLink:
             link_graph.add_edge(source, target)
         return link_graph
 
+    # @property
+    # def link_graph(self) -> nx.Graph:
+    #     link_graph = nx.Graph()
+    #     for (source, target), link in self._links.items():
+    #         link_graph.add_edge(source, target)
+    #     return link_graph
+
     def get_link_path(self, source, target):
         return nx.shortest_path(self.link_graph, source, target)
 
@@ -147,6 +168,18 @@ class MorphLink:
             )
 
         return current_index
+
+    def query_nodes(self, query_str, layer_name):
+        layer_query = self._layers[layer_name].query_nodes(query_str)
+        new_index = layer_query.nodes.index
+        new_morphology = self.__class__()
+        for other_layer_name, other_layer in self._layers.items():
+            other_indices = self.get_mapping(other_layer_name, layer_name)
+            mask = other_indices.isin(new_index)
+            new_other_layer = other_layer.mask_nodes(mask)
+            new_morphology._add_layer(new_other_layer, other_layer_name)
+            # TODO drop links that are no longer valid
+        return new_morphology
 
     def to_pyvista(self) -> dict["pv.PolyData"]:
         pv = import_pyvista()

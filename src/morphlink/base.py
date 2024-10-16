@@ -26,6 +26,11 @@ class FacetFrame:
         self.facets: pd.DataFrame = facets
         self.spatial_columns = spatial_columns
 
+    def get_params(self):
+        return {
+            "spatial_columns": self.spatial_columns,
+        }
+
     @property
     def vertices(self):
         """Array of the spatial coordinates of the vertices"""
@@ -77,3 +82,19 @@ class FacetFrame:
     @property
     def edge_index(self):
         return self.facets_index
+
+    @property
+    def facets_positional(self) -> np.ndarray:
+        return np.vectorize(self.nodes.index.get_loc)(self.facets)
+
+    def query_nodes(self, query_str):
+        new_nodes = self.nodes.query(query_str)
+        new_index = new_nodes.index
+        new_facets = self.facets[self.facets.isin(new_index).all(axis=1)]
+        return self.__class__((new_nodes, new_facets), **self.get_params())
+
+    def mask_nodes(self, mask):
+        new_nodes = self.nodes.iloc[mask]
+        new_index = new_nodes.index
+        new_facets = self.facets[self.facets.isin(new_index).all(axis=1)]
+        return self.__class__((new_nodes, new_facets), **self.get_params())

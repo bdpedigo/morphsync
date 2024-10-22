@@ -5,13 +5,13 @@ from .integration import import_pyvista
 
 
 class Graph(FacetFrame):
-    def __init__(self, graph, spatial_columns=None):
+    def __init__(self, graph):
         if hasattr(graph, "vertices") and hasattr(graph, "edges"):
             vertices = graph.vertices
             edges = graph.edges
         elif isinstance(graph, tuple):
             vertices, edges = graph
-        super().__init__(vertices, edges, spatial_columns=spatial_columns)
+        super().__init__(vertices, edges)
         self._graph = graph
 
     def __repr__(self):

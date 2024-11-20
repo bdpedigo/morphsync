@@ -1,6 +1,6 @@
-from .mesh import Mesh
-from .morph import MorphLink
-from .points import Points
 from .graph import Graph
+from .mesh import Mesh
+from .morph import MorphSync
+from .points import Points
 
-__all__ = ["MorphLink", "Mesh", "Points", "Graph"]
+__all__ = ["MorphSync", "Mesh", "Points", "Graph"]

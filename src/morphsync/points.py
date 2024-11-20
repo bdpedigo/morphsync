@@ -25,4 +25,4 @@ class Points(FacetFrame):
 
     def to_pyvista(self):
         pv = import_pyvista()
-        return pv.PolyData(self.points)
+        return pv.PolyData(self.points.astype(float))

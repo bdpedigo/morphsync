@@ -10,7 +10,7 @@ from .points import Points
 from .table import Table
 
 
-class MorphLink:
+class MorphSync:
     def __init__(self):
         # self._meshes = {}
         # self._spatial_graphs = {}
@@ -128,7 +128,12 @@ class MorphLink:
         elif isinstance(mapping, (pd.Series, pd.Index)):
             raise NotImplementedError()
         elif isinstance(mapping, dict):
-            raise NotImplementedError()
+            mapping_type = 'specified'
+            mapping_df = pd.Series(mapping)
+            mapping_df.index.name = source
+            mapping_df.name = target
+            mapping_df = mapping_df.to_frame().reset_index()
+
 
         self._links[(source, target)] = mapping_df
         self._link_origins[(source, target)] = mapping_type

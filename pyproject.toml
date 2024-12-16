@@ -7,7 +7,7 @@ dependencies = [
 description = "Add your description here"
 name = "morphsync"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 version = "0.1.0"
 
 [build-system]

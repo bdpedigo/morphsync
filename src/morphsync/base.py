@@ -1,5 +1,51 @@
+from typing import List, Union
 import numpy as np
 import pandas as pd
+import fastremap
+from cachetools import LRUCache, cached
+from joblib import hash
+
+
+def mask_and_remap(
+    arr: np.ndarray,
+    mask: Union[np.ndarray, list],
+):
+    """Given an array in unmasked indexing and a mask,
+    return the array in remapped indexing and omit rows with masked values.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        NxM array of indices
+    mask : Union[np.ndarray, list
+        1D array of indices to mask, either as a boolean mask or as a list of indices
+    """
+    if np.array(mask).dtype == bool:
+        mask = np.where(mask)[0]
+    return _mask_and_remap(np.array(arr, dtype=int), mask)
+
+
+def _numpy_hash(*args, **kwargs):
+    return tuple(hash(x) for x in args) + tuple(hash(x) for x in kwargs.items())
+
+
+@cached(cache=LRUCache(maxsize=128), key=_numpy_hash)
+def _mask_and_remap(
+    arr: np.ndarray,
+    mask: np.ndarray,
+):
+    mask_dict = {k: v for k, v in zip(mask, range(len(mask)))}
+    mask_dict[-1] = -1
+
+    arr_offset = arr + 1
+    arr_mask_full = fastremap.remap(
+        fastremap.mask_except(arr_offset, list(mask + 1)) - 1,
+        mask_dict,
+    )
+    if len(arr_mask_full.shape) == 1:
+        return arr_mask_full[~np.any(arr_mask_full == -1)]
+    else:
+        return arr_mask_full[~np.any(arr_mask_full == -1, axis=1)]
 
 
 class FacetFrame:
@@ -85,7 +131,7 @@ class FacetFrame:
 
     @property
     def facets_positional(self) -> np.ndarray:
-        return np.vectorize(self.nodes.index.get_loc)(self.facets)
+        return mask_and_remap(self.facets, self.nodes.index)
 
     def query_nodes(self, query_str):
         new_nodes = self.nodes.query(query_str)

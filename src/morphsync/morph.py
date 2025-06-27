@@ -169,17 +169,28 @@ class MorphLink:
 
         return current_index
 
+    def apply_mask(self, layer_name, mask):
+        layer = self.layers.loc[layer_name].layer
+        new_index = layer.vertices_index[mask]
+        return self._generate_new_morphology(layer_name, new_index)
+
+    def _generate_new_morphology(self, layer_name, new_index):
+        new_morphology = self.__class__()
+        new_morphology._add_layer(
+            self._layers[layer_name].mask_by_vertex_index(new_index), layer_name
+        )
+        for other_layer_name, other_layer in self._layers.items():
+            if other_layer_name != layer_name:
+                other_indices = self.get_mapping(other_layer_name, layer_name)
+                new_morphology._add_layer(
+                    other_layer.mask_by_vertex_index(other_indices), other_layer_name
+                )
+        return new_morphology
+
     def query_nodes(self, query_str, layer_name):
         layer_query = self._layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
-        new_morphology = self.__class__()
-        for other_layer_name, other_layer in self._layers.items():
-            other_indices = self.get_mapping(other_layer_name, layer_name)
-            mask = other_indices.isin(new_index)
-            new_other_layer = other_layer.mask_nodes(mask)
-            new_morphology._add_layer(new_other_layer, other_layer_name)
-            # TODO drop links that are no longer valid
-        return new_morphology
+        return self._generate_new_morphology(layer_name, new_index)
 
     def to_pyvista(self) -> dict["pv.PolyData"]:
         pv = import_pyvista()

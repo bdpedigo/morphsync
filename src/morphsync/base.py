@@ -136,11 +136,15 @@ class FacetFrame:
     def query_nodes(self, query_str):
         new_nodes = self.nodes.query(query_str)
         new_index = new_nodes.index
-        new_facets = self.facets[self.facets.isin(new_index).all(axis=1)]
-        return self.__class__((new_nodes, new_facets), **self.get_params())
+        return self.mask_by_vertex_index(new_index, new_nodes=new_nodes)
 
     def mask_nodes(self, mask):
         new_nodes = self.nodes.iloc[mask]
         new_index = new_nodes.index
+        return self.mask_by_vertex_index(new_index, new_nodes=new_nodes)
+
+    def mask_by_vertex_index(self, new_index, new_nodes=None):
+        if new_nodes is None:
+            new_nodes = self.nodes.loc[new_index]
         new_facets = self.facets[self.facets.isin(new_index).all(axis=1)]
         return self.__class__((new_nodes, new_facets), **self.get_params())

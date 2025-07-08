@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 import numpy as np
 import pandas as pd
 import fastremap
@@ -93,11 +93,6 @@ class FacetFrame:
         return self.vertices
 
     @property
-    def points_df(self):
-        """Alias for vertices_df"""
-        return self.vertices_df
-
-    @property
     def n_nodes(self):
         return len(self.nodes)
 
@@ -136,14 +131,14 @@ class FacetFrame:
     def query_nodes(self, query_str):
         new_nodes = self.nodes.query(query_str)
         new_index = new_nodes.index
-        return self.mask_by_vertex_index(new_index, new_nodes=new_nodes)
+        return self.mask_by_node_index(new_index, new_nodes=new_nodes)
 
     def mask_nodes(self, mask):
         new_nodes = self.nodes.iloc[mask]
         new_index = new_nodes.index
-        return self.mask_by_vertex_index(new_index, new_nodes=new_nodes)
+        return self.mask_by_node_index(new_index, new_nodes=new_nodes)
 
-    def mask_by_vertex_index(self, new_index, new_nodes=None):
+    def mask_by_node_index(self, new_index, new_nodes=None):
         if new_nodes is None:
             new_nodes = self.nodes.loc[new_index]
         new_facets = self.facets[self.facets.isin(new_index).all(axis=1)]

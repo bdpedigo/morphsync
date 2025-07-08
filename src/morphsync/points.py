@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 from .base import FacetFrame
-from .integration import import_pyvista
 
 
 class Points(FacetFrame):
@@ -22,7 +21,3 @@ class Points(FacetFrame):
 
     def __repr__(self):
         return f"Points(points={self.points.shape})"
-
-    def to_pyvista(self):
-        pv = import_pyvista()
-        return pv.PolyData(self.points.astype(float))

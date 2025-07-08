@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 
 from .graph import Graph
-from .integration import import_pyvista
 from .mapping import project_points_to_nearest
 from .mesh import Mesh
 from .points import Points
@@ -12,9 +11,6 @@ from .table import Table
 
 class MorphSync:
     def __init__(self):
-        # self._meshes = {}
-        # self._spatial_graphs = {}
-        # self._points = {}
         self._layers = {}
         self._links = {}
         self._link_origins = {}
@@ -56,7 +52,6 @@ class MorphSync:
         self._add_layer(graph, name)
 
     def add_table(self, dataframe, name, **kwargs) -> None:
-        # self._tables[name] = dataframe
         table = Table(dataframe, **kwargs)
         self._add_layer(table, name)
 
@@ -65,7 +60,6 @@ class MorphSync:
         layers = {}
         for name, layer in self._layers.items():
             layers[name] = {
-                # "name": name,
                 "layer": layer.__repr__(),
                 "layer_type": layer.__class__.__name__,
             }
@@ -128,12 +122,11 @@ class MorphSync:
         elif isinstance(mapping, (pd.Series, pd.Index)):
             raise NotImplementedError()
         elif isinstance(mapping, dict):
-            mapping_type = 'specified'
+            mapping_type = "specified"
             mapping_df = pd.Series(mapping)
             mapping_df.index.name = source
             mapping_df.name = target
             mapping_df = mapping_df.to_frame().reset_index()
-
 
         self._links[(source, target)] = mapping_df
         self._link_origins[(source, target)] = mapping_type
@@ -167,13 +160,6 @@ class MorphSync:
             link_graph.add_edge(source, target)
         return link_graph
 
-    # @property
-    # def link_graph(self) -> nx.Graph:
-    #     link_graph = nx.Graph()
-    #     for (source, target), link in self._links.items():
-    #         link_graph.add_edge(source, target)
-    #     return link_graph
-
     def get_link_path(self, source, target):
         return nx.shortest_path(self.link_graph, source, target)
 
@@ -195,6 +181,24 @@ class MorphSync:
             )
 
         return current_index
+
+    def apply_mask(self, layer_name, mask):
+        layer = self.layers.loc[layer_name].layer
+        new_index = layer.vertices_index[mask]
+        return self._generate_new_morphology(layer_name, new_index)
+
+    def _generate_new_morphology(self, layer_name, new_index):
+        new_morphology = self.__class__()
+        new_morphology._add_layer(
+            self._layers[layer_name].mask_by_vertex_index(new_index), layer_name
+        )
+        for other_layer_name, other_layer in self._layers.items():
+            if other_layer_name != layer_name:
+                other_indices = self.get_mapping(other_layer_name, layer_name)
+                new_morphology._add_layer(
+                    other_layer.mask_by_vertex_index(other_indices), other_layer_name
+                )
+        return new_morphology
 
     def get_link_as_layer(self, source, target):
         source_index = self._layers[source].nodes_index
@@ -218,19 +222,4 @@ class MorphSync:
     def query_nodes(self, query_str, layer_name):
         layer_query = self._layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
-        new_morphology = self.__class__()
-        for other_layer_name, other_layer in self._layers.items():
-            other_indices = self.get_mapping(other_layer_name, layer_name)
-            mask = other_indices.isin(new_index)
-            new_other_layer = other_layer.mask_nodes(mask)
-            new_morphology._add_layer(new_other_layer, other_layer_name)
-            # TODO drop links that are no longer valid
-        return new_morphology
-
-    def to_pyvista(self) -> dict["pv.PolyData"]:
-        pv = import_pyvista()
-        polydatas = {}
-        for layer, layer_obj in self._layers.items():
-            if hasattr(layer_obj, "to_pyvista"):
-                polydatas[layer] = layer_obj.to_pyvista()
-        return polydatas
+        return self._generate_new_morphology(layer_name, new_index)

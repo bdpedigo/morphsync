@@ -20,11 +20,6 @@ class Mesh(FacetFrame):
     def __repr__(self):
         return f"Mesh(vertices={self.n_vertices}, faces={self.n_facets})"
 
-    def to_pyvista(self):
-        pv = import_pyvista()
-
-        return pv.make_tri_mesh(self.vertices, self.faces)
-
     @classmethod
     def from_dict(cls, data):
         return cls(data["vertices"], data["faces"])

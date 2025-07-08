@@ -1,5 +1,4 @@
 from .base import FacetFrame
-from .integration import import_pyvista
 
 
 class Mesh(FacetFrame):

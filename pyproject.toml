@@ -2,16 +2,16 @@
 dependencies = [
     "cachetools>=5.5.1",
     "fastremap>=1.15.1",
-    "joblib>=1.4.2",
-    "numpy>=2.1.2",
-    "pandas>=2.2.3",
-    "scikit-learn>=1.5.2",
-    "scipy>=1.14.1",
+    "joblib>=1.5.1",
+    "numpy>=2.3.1",
+    "pandas>=2.3.1",
+    "scikit-learn>=1.7.0",
+    "scipy>=1.16.0",
 ]
 description = "Add your description here"
 name = "morphsync"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "0.1.0"
 
 [build-system]

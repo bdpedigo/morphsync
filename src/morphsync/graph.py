@@ -1,17 +1,16 @@
 import numpy as np
 
 from .base import FacetFrame
-from .integration import import_pyvista
 
 
 class Graph(FacetFrame):
-    def __init__(self, graph, spatial_columns=None):
+    def __init__(self, graph):
         if hasattr(graph, "vertices") and hasattr(graph, "edges"):
             vertices = graph.vertices
             edges = graph.edges
         elif isinstance(graph, tuple):
             vertices, edges = graph
-        super().__init__(vertices, edges, spatial_columns=spatial_columns)
+        super().__init__(vertices, edges)
         self._graph = graph
 
     def __repr__(self):
@@ -29,13 +28,6 @@ class Graph(FacetFrame):
     def edges_positional(self):
         return np.vectorize(self.nodes.index.get_loc)(self.edges)
 
-    def to_pyvista(self):
-        pv = import_pyvista()
-        lines = np.empty((len(self.edges_positional), 3), dtype=int)
-        lines[:, 0] = 2
-        lines[:, 1:3] = self.edges_positional
-
-        return pv.PolyData(self.vertices, lines=lines)
 
     def to_adjacency(self, return_as="csr", weights=None, directed=False):
         if return_as == "csr":

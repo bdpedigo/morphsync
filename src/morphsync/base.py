@@ -1,7 +1,8 @@
 from typing import Union
+
+import fastremap
 import numpy as np
 import pandas as pd
-import fastremap
 from cachetools import LRUCache, cached
 from joblib import hash
 
@@ -53,13 +54,11 @@ class FacetFrame:
     # a facet complex with no facets is a point cloud
     # a facet complex with edges is a spatial network/graph
     # a facet complex with faces (3-facets i.e. triangles) is a mesh
-    def __init__(self, nodes, facets, spatial_columns=None):
-        if spatial_columns is None:
-            spatial_columns = ["x", "y", "z"]
+    def __init__(self, nodes, facets):
         if not isinstance(nodes, pd.DataFrame):
             if isinstance(nodes, np.ndarray):
                 if nodes.shape[1] == 3:
-                    nodes = pd.DataFrame(nodes, columns=spatial_columns)
+                    nodes = pd.DataFrame(nodes)
                 else:
                     raise ValueError("Nodes must be a 3D array")
             else:
@@ -70,12 +69,6 @@ class FacetFrame:
         if not isinstance(facets, pd.DataFrame):
             facets = pd.DataFrame(facets)
         self.facets: pd.DataFrame = facets
-        self.spatial_columns = spatial_columns
-
-    def get_params(self):
-        return {
-            "spatial_columns": self.spatial_columns,
-        }
 
     @property
     def vertices(self):
@@ -85,7 +78,7 @@ class FacetFrame:
     @property
     def vertices_df(self):
         """DataFrame of the spatial coordinates of the vertices"""
-        return self.nodes[self.spatial_columns]
+        return self.nodes
 
     @property
     def points(self):
@@ -103,6 +96,10 @@ class FacetFrame:
     @property
     def n_points(self):
         return self.n_nodes
+
+    @property
+    def n_facets(self):
+        return len(self.facets)
 
     @property
     def nodes_index(self):

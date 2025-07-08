@@ -17,16 +17,8 @@ class Mesh(FacetFrame):
     def faces(self):
         return self.facets_positional
 
-    def __str__(self):
-        return f"Mesh(vertices={self.vertices.shape}, faces={self.faces.shape})"
-
     def __repr__(self):
-        return f"Mesh(vertices={self.vertices.shape}, faces={self.faces.shape})"
-
-    def to_pyvista(self):
-        pv = import_pyvista()
-
-        return pv.make_tri_mesh(self.vertices, self.faces)
+        return f"Mesh(vertices={self.n_vertices}, faces={self.n_facets})"
 
     @classmethod
     def from_dict(cls, data):

@@ -5,7 +5,7 @@ from .base import FacetFrame
 
 
 class Points(FacetFrame):
-    def __init__(self, points):
+    def __init__(self, points, *args, **kwargs):
         if isinstance(points, tuple):
             # TODO possibly dumb hack for compatibility with mask_nodes etc.
             # but currently, all FacetFrames are expected to take 2 arguments
@@ -17,7 +17,12 @@ class Points(FacetFrame):
             points = pd.DataFrame(points)
         elif isinstance(points, pd.DataFrame):
             pass
-        super().__init__(points, None)
+        kwargs["relation_columns"] = []
+        super().__init__(points, None, *args, **kwargs)
 
     def __repr__(self):
         return f"Points(points={self.points.shape})"
+
+    @property
+    def index(self):
+        return self.nodes.index

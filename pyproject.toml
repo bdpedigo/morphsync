@@ -3,10 +3,10 @@ dependencies = [
     "cachetools>=5.5.1",
     "fastremap>=1.15.1",
     "joblib>=1.5.1",
-    "numpy>=2.3.1",
+    "numpy>=2.0.1",
     "pandas>=2.3.1",
-    "scikit-learn>=1.7.0",
-    "scipy>=1.16.0",
+    "scikit-learn>=1.5.0",
+    "scipy>=1.15.0",
 ]
 description = "Add your description here"
 name = "morphsync"

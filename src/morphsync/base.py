@@ -67,10 +67,12 @@ class FacetFrame:
             if isinstance(nodes, np.ndarray):
                 if nodes.shape[1] == 3:
                     nodes = pd.DataFrame(nodes, columns=DEFAULT_SPATIAL_COLUMNS)
+                    if spatial_columns is None:
+                        spatial_columns = DEFAULT_SPATIAL_COLUMNS
                 else:
-                    raise ValueError("Nodes must be a 3D array")
+                    raise ValueError("Nodes must be an nx3 array")
             else:
-                raise ValueError("Nodes must be a DataFrame or a 3D array")
+                raise ValueError("Nodes must be a DataFrame or an nx3 array")
             # if spatial_columns is None:
             #     if nodes.shape[1] != 3:
             #         raise ValueError(
@@ -86,6 +88,8 @@ class FacetFrame:
             facets = pd.DataFrame()
         if not isinstance(facets, pd.DataFrame):
             facets = pd.DataFrame(facets)
+            if relation_columns is None:
+                relation_columns = facets.columns.tolist()
         self.facets: pd.DataFrame = facets
 
         if relation_columns is None:
@@ -186,7 +190,8 @@ class FacetFrame:
         # new_facets = select_facets.copy()
         # new_facets[self.relation_columns] = new_facet_array
         # print(self.get_params())
-        return self.__class__((new_nodes, new_facets), **self.get_params())
+        out = self.__class__((new_nodes, new_facets), **self.get_params())
+        return out
 
     def get_params(self):
         return {

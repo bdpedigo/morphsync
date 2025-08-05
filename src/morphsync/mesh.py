@@ -4,13 +4,15 @@ from .base import FacetFrame
 class Mesh(FacetFrame):
     def __init__(self, input, **kwargs):
         if hasattr(input, "vertices") and hasattr(input, "faces"):
-            super().__init__(input.vertices, input.faces, **kwargs)
+            vertices = input.vertices
+            faces = input.faces
         elif isinstance(input, tuple):
-            super().__init__(input[0], input[1], **kwargs)
+            vertices, faces = input
         else:
             raise NotImplementedError(
                 "Only accepts objects with 'vertices' and 'faces' attributes"
             )
+        super().__init__(vertices, faces, **kwargs)
 
     @property
     def faces(self):
@@ -22,3 +24,13 @@ class Mesh(FacetFrame):
     @classmethod
     def from_dict(cls, data):
         return cls(data["vertices"], data["faces"])
+
+    @property
+    def is_spatially_valid(self):
+        is_valid = (self.vertices.shape[1] == 3) & (self.vertices.shape[0] > 0)
+        is_valid &= (self.faces.shape[1] == 3) & (self.faces.shape[0] > 0)
+        return is_valid
+
+    @property
+    def mesh(self):
+        return (self.vertices, self.faces)

@@ -26,3 +26,7 @@ class Points(FacetFrame):
     @property
     def index(self):
         return self.nodes.index
+
+    @property
+    def is_spatially_valid(self):
+        return (self.points.shape[1] == 3) & (self.points.shape[0] > 0)

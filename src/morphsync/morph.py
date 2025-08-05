@@ -9,6 +9,7 @@ from .mapping import project_points_to_nearest
 from .mesh import Mesh
 from .points import Points
 from .table import Table
+from .base import FacetFrame
 
 
 class MorphSync:
@@ -30,6 +31,14 @@ class MorphSync:
     @property
     def layer_names(self):
         return list(self._layers.keys())
+
+    def has_layer(self, name):
+        return name in self._layers
+
+    def get_layer(self, name) -> FacetFrame:
+        if name not in self._layers:
+            raise KeyError(f"Layer '{name}' does not exist.")
+        return self._layers[name]
 
     @property
     def layer_types(self):
@@ -225,6 +234,7 @@ class MorphSync:
         return nx.shortest_path(self.link_graph, source, target)
 
     def get_mapping(self, source, target, source_index=None):
+        """Try to find a 1-to-1 mapping from source to target using the links."""
         # TODO: make this operate on the mappings themselves and then only apply to
         # the index at the end
         if source_index is None:
@@ -292,10 +302,18 @@ class MorphSync:
             source_index = self._layers[source].nodes_index
 
         target_index = self.get_mapping(source, target, source_index)
-        out = self._layers[target].nodes.loc[target_index]
+        out = self._layers[target].nodes.reindex(target_index)
         if replace_index:
             out = out.set_index(source_index)
         return out
+
+    def assign_from_mapping(self, source, target, columns):
+        """
+        Assign values from the source layer to the target layer based on the mapping.
+        """
+        mapped_nodes = self.get_mapped_nodes(source, target, replace_index=True)[columns]
+        source_layer = self.get_layer(source)
+        source_layer.nodes[columns] = mapped_nodes
 
     def apply_mask(self, layer_name, mask):
         layer = self._layers[layer_name]
@@ -318,6 +336,7 @@ class MorphSync:
                 new_morphology._add_layer(
                     other_layer.mask_by_node_index(other_indices), other_layer_name
                 )
+        new_morphology._links = self._links
 
         return new_morphology
 

@@ -2,5 +2,6 @@ from .graph import Graph
 from .mesh import Mesh
 from .morph import MorphSync
 from .points import Points
+from .table import Table
 
-__all__ = ["MorphSync", "Mesh", "Points", "Graph"]
+__all__ = ["MorphSync", "Mesh", "Points", "Graph", "Table"]

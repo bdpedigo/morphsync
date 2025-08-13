@@ -363,3 +363,13 @@ class MorphSync:
         layer_query = self._layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
         return self._generate_new_morphology(layer_name, new_index)
+
+    # def to_h5(self, path):
+    #     """
+    #     Save the MorphSync object to an HDF5 file.
+    #     """
+    #     import h5py
+
+    #     with h5py.File(path, "w") as f: 
+    #         f.create_group('layers')
+    #         for name, layer in self._layers.items():

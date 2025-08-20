@@ -78,7 +78,7 @@ class FacetFrame:
             #         raise ValueError(
             #             "If spatial_columns is not provided, nodes must have 3 columns"
             #         )
-        self.nodes: pd.DataFrame = nodes
+        self.nodes: pd.DataFrame = nodes.copy()
 
         if spatial_columns is None:
             spatial_columns = []

@@ -74,13 +74,7 @@ class FacetFrame:
                     raise ValueError("Nodes must be an nx3 array")
             else:
                 raise ValueError("Nodes must be a DataFrame or an nx3 array")
-            # if spatial_columns is None:
-            #     if nodes.shape[1] != 3:
-            #         raise ValueError(
-            #             "If spatial_columns is not provided, nodes must have 3 columns"
-            #         )
-
-        if copy:
+       if copy:
             nodes = nodes.copy()
         self.nodes: pd.DataFrame = nodes
 

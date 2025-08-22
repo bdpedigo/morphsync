@@ -1,15 +1,16 @@
 from functools import partial
+from typing import Optional, Union
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 
+from .base import FacetFrame
 from .graph import Graph
 from .mapping import project_points_to_nearest
 from .mesh import Mesh
 from .points import Points
 from .table import Table
-from .base import FacetFrame
 
 
 class MorphSync:
@@ -58,7 +59,7 @@ class MorphSync:
         if name in self._layers:
             del self._layers[name]
             delattr(self, name)
-            # TODO delete links
+            # TODO delete links?
 
     def add_mesh(self, mesh, name: str, **kwargs) -> None:
         native_mesh = mesh
@@ -233,8 +234,41 @@ class MorphSync:
     def get_link_path(self, source, target):
         return nx.shortest_path(self.link_graph, source, target)
 
-    def get_mapping(self, source, target, source_index=None):
-        """Try to find a 1-to-1 mapping from source to target using the links."""
+    def get_mapping_paths(
+        self,
+        source: str,
+        target: str,
+        source_index: Optional[Union[np.ndarray, pd.Index]] = None,
+        validate=None,
+    ) -> pd.DataFrame:
+        """
+        Find mappings from source to target layers using the entire link graph, and
+        describe the mapping at each step.
+
+        Parameters
+        ----------
+        source :
+            Name of the source layer.
+        target :
+            Name of the target layer.
+        source_index : pd.Index, optional
+            Index of the source layer to map from. If None, uses all indices in the
+            source layer.
+        validate : str, optional
+            Whether to validate the mapping at each step. If specified, checks if each
+            mapping between layers is of the specified type. Options are:
+            - “one_to_one” or “1:1”: check if join keys are unique in both source and target layers.
+            - “one_to_many” or “1:m”: check if join keys are unique in the source dataset.
+            - “many_to_one” or “m:1”: check if join keys are unique in the target dataset.
+            - “many_to_many” or “m:m”: allowed, but does not result in checks.
+
+        Returns
+        -------
+        :
+            Mapped indices in the target layer corresponding to the source_index in the
+            source layer. Note that there may be duplicates or -1 values if the
+            mapping is not one-to-one. -1 denotes null or no mapping.
+        """
         # TODO: make this operate on the mappings themselves and then only apply to
         # the index at the end
         if source_index is None:
@@ -242,78 +276,133 @@ class MorphSync:
         else:
             if not isinstance(source_index, pd.Index):
                 source_index = pd.Index(source_index)
-        current_index = source_index.values.copy()
+
+        joined_mapping = pd.DataFrame(index=source_index)
+        joined_mapping[source] = source_index
         for current_source, current_target in nx.utils.pairwise(
             self.get_link_path(source, target)
         ):
-            mapping_series = self._links[(current_source, current_target)].set_index(
-                current_source
-            )[current_target]
-            # print(mapping_df)
-            current_index = mapping_series.reindex(current_index, fill_value=-1).values
-            # print(mapping)
-            # mapping = mapping.values
+            mapping_series = (
+                self._links[(current_source, current_target)]
+                .set_index(current_source)[current_target]
+                .drop(
+                    -1, errors="ignore"
+                )  # not sure if necessary but being safe for now
+            )
+            # catch pandas MergeError due to validate here, raise a more informative error
 
-            # # TODO total hack to preserve -1s, "preserve_missing_labels" in fastremap
-            # # was not working
-            # mapping = np.concatenate((mapping, np.array([[-1, -1]])), axis=0)
+            try:
+                joined_mapping = joined_mapping.join(
+                    mapping_series, how="left", on=current_source, validate=validate
+                )
+            except pd.errors.MergeError as e:
+                raise pd.errors.MergeError(
+                    f"Mapping from '{current_source}' to '{current_target}' failed validation '{validate}'."
+                ) from e
 
-            # current_index = fastremap.remap_from_array_kv(
-            #     current_index,
-            #     mapping[:, 0],
-            #     mapping[:, 1],
-            # )
+            # TODO decide whether to use -1 or NaN for unmapped
+            joined_mapping[current_target] = (
+                joined_mapping[current_target].fillna(-1).astype(int)
+            )
+        joined_mapping = joined_mapping.loc[source_index]
+        return joined_mapping
 
-        return current_index
+    def get_mapping(
+        self, source: str, target: str, source_index=None, validate=None, dropna=True
+    ) -> pd.Series:
+        """
+        Find mappings from source to target layers using the entire link graph.
+
+        Parameters
+        ----------
+        source :
+            Name of the source layer.
+        target :
+            Name of the target layer.
+        source_index : pd.Index, optional
+            Index of the source layer to map from. If None, uses all indices in the
+            source layer.
+        validate : str, optional
+            Whether to validate the mapping at each step. If specified, checks if each
+            mapping between layers is of the specified type. Options are:
+            - “one_to_one” or “1:1”: check if join keys are unique in both source and target layers.
+            - “one_to_many” or “1:m”: check if join keys are unique in the source dataset.
+            - “many_to_one” or “m:1”: check if join keys are unique in the target dataset.
+            - “many_to_many” or “m:m”: allowed, but does not result in checks.
+        dropna : bool, default True
+            Whether to drop -1/null values (no mapping) from the output.
+
+        Returns
+        -------
+        :
+            Series with nodes in the source layer as the index and mapped nodes in
+            the target layer as the values. Note that there may be duplicates or -1
+            values if the mapping is not one-to-one. -1 denotes null or no mapping.
+
+        Notes
+        -----
+        This function is a convenience wrapper around `get_mapping_path` that returns
+        just the final mapping as a Series. If you need to see the full mapping at
+        each step, use `get_mapping_path`.
+        """
+        mapping_path = self.get_mapping_paths(source, target, source_index, validate)
+        mapping = mapping_path.set_index(source)[target]
+        if dropna:
+            mapping = mapping[mapping != -1]
+        return mapping
 
     def get_masking(self, source, target, source_index=None):
         """Gets any elements from another layer that map to any of source_index."""
-        if source_index is None:
-            source_index = self._layers[source].nodes_index
-        else:
-            if not isinstance(source_index, pd.Index):
-                source_index = pd.Index(source_index)
 
-        current_index = source_index.values.copy()
-        current_index = np.unique(current_index)
-        for current_source, current_target in nx.utils.pairwise(
-            self.get_link_path(source, target)
-        ):
-            mapping_series = self._links[(current_source, current_target)].set_index(
-                current_source
-            )[current_target]
+        mapping = self.get_mapping(source, target, source_index, dropna=True)
+        target_ids = mapping.values
+        target_ids = np.unique(target_ids)
+        return target_ids
 
-            # NOTE: this is somewhat slow but not as bad as the loc
-            intersection = mapping_series.index.intersection(current_index)
-
-            # NOTE this is the slow part
-            current_index = mapping_series.loc[intersection].values
-
-            current_index = np.unique(current_index)
-
-        return current_index
-
-    def get_mapped_nodes(self, source, target, source_index=None, replace_index=False):
+    def get_mapped_nodes(
+        self, source, target, source_index=None, replace_index=True, validate=None
+    ):
         """
-        Get a new layer that is mapped from the source layer to the target layer
-        using the mapping defined in the links.
+        Get features from the target layer, for specified nodes mapped from the source
+        layer.
         """
         if source_index is None:
             source_index = self._layers[source].nodes_index
 
-        target_index = self.get_mapping(source, target, source_index)
+        mapping = self.get_mapping(
+            source, target, source_index, validate=validate, dropna=True
+        )
+        target_index = mapping.values
         out = self._layers[target].nodes.reindex(target_index)
         if replace_index:
-            out = out.set_index(source_index)
+            out = out.set_index(mapping.index)
         return out
 
-    def assign_from_mapping(self, source, target, columns):
+    def assign_from_mapping(
+        self,
+        source: str,
+        target: str,
+        columns: Union[str, list, dict],
+    ):
         """
         Assign values from the source layer to the target layer based on the mapping.
         """
-        mapped_nodes = self.get_mapped_nodes(source, target, replace_index=True)[columns]
+        if isinstance(columns, dict):
+            target_columns = list(columns.keys())
+            source_columns = list(columns.values())
+        elif isinstance(columns, str):
+            target_columns = [columns]
+            source_columns = [columns]
+        elif isinstance(columns, list):
+            target_columns = columns
+            source_columns = columns
+        else:
+            raise TypeError("Columns must be a str, list, or dict")
+        mapped_nodes = self.get_mapped_nodes(
+            source, target, replace_index=True, validate="m:1"
+        )[target_columns]
         source_layer = self.get_layer(source)
-        source_layer.nodes[columns] = mapped_nodes
+        source_layer.nodes[source_columns] = mapped_nodes
 
     def apply_mask(self, layer_name, mask):
         layer = self._layers[layer_name]
@@ -341,8 +430,9 @@ class MorphSync:
         return new_morphology
 
     def get_link_as_layer(self, source, target):
-        source_index = self._layers[source].nodes_index
-        target_index = self.get_mapping(source, target)
+        mapping = self.get_mapping(source, target)
+        source_index = mapping.index
+        target_index = mapping.values
         source_nodes = self._layers[source].nodes.loc[source_index]
         target_nodes = self._layers[target].nodes.loc[target_index]
         node_positions = np.concatenate(
@@ -363,13 +453,3 @@ class MorphSync:
         layer_query = self._layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
         return self._generate_new_morphology(layer_name, new_index)
-
-    # def to_h5(self, path):
-    #     """
-    #     Save the MorphSync object to an HDF5 file.
-    #     """
-    #     import h5py
-
-    #     with h5py.File(path, "w") as f: 
-    #         f.create_group('layers')
-    #         for name, layer in self._layers.items():

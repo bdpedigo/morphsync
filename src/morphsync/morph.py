@@ -59,7 +59,7 @@ class MorphSync:
         if name in self._layers:
             del self._layers[name]
             delattr(self, name)
-            # TODO delete links
+            # TODO delete links?
 
     def add_mesh(self, mesh, name: str, **kwargs) -> None:
         native_mesh = mesh
@@ -234,7 +234,7 @@ class MorphSync:
     def get_link_path(self, source, target):
         return nx.shortest_path(self.link_graph, source, target)
 
-    def get_mapping_path(
+    def get_mapping_paths(
         self,
         source: str,
         target: str,
@@ -289,15 +289,22 @@ class MorphSync:
                     -1, errors="ignore"
                 )  # not sure if necessary but being safe for now
             )
-            joined_mapping = joined_mapping.join(
-                mapping_series, how="left", on=current_source, validate=validate
-            )
+            # catch pandas MergeError due to validate here, raise a more informative error
+
+            try:
+                joined_mapping = joined_mapping.join(
+                    mapping_series, how="left", on=current_source, validate=validate
+                )
+            except pd.errors.MergeError as e:
+                raise pd.errors.MergeError(
+                    f"Mapping from '{current_source}' to '{current_target}' failed validation '{validate}'."
+                ) from e
 
             # TODO decide whether to use -1 or NaN for unmapped
             joined_mapping[current_target] = (
                 joined_mapping[current_target].fillna(-1).astype(int)
             )
-
+        joined_mapping = joined_mapping.loc[source_index]
         return joined_mapping
 
     def get_mapping(
@@ -338,7 +345,7 @@ class MorphSync:
         just the final mapping as a Series. If you need to see the full mapping at
         each step, use `get_mapping_path`.
         """
-        mapping_path = self.get_mapping_path(source, target, source_index, validate)
+        mapping_path = self.get_mapping_paths(source, target, source_index, validate)
         mapping = mapping_path.set_index(source)[target]
         if dropna:
             mapping = mapping[mapping != -1]
@@ -352,7 +359,9 @@ class MorphSync:
         target_ids = np.unique(target_ids)
         return target_ids
 
-    def get_mapped_nodes(self, source, target, source_index=None, replace_index=True):
+    def get_mapped_nodes(
+        self, source, target, source_index=None, replace_index=True, validate=None
+    ):
         """
         Get features from the target layer, for specified nodes mapped from the source
         layer.
@@ -360,21 +369,40 @@ class MorphSync:
         if source_index is None:
             source_index = self._layers[source].nodes_index
 
-        target_index = self.get_mapping(source, target, source_index)
+        mapping = self.get_mapping(
+            source, target, source_index, validate=validate, dropna=True
+        )
+        target_index = mapping.values
         out = self._layers[target].nodes.reindex(target_index)
         if replace_index:
-            out = out.set_index(source_index)
+            out = out.set_index(mapping.index)
         return out
 
-    def assign_from_mapping(self, source, target, columns):
+    def assign_from_mapping(
+        self,
+        source: str,
+        target: str,
+        columns: Union[str, list, dict],
+    ):
         """
         Assign values from the source layer to the target layer based on the mapping.
         """
-        mapped_nodes = self.get_mapped_nodes(source, target, replace_index=True)[
-            columns
-        ]
+        if isinstance(columns, dict):
+            target_columns = list(columns.keys())
+            source_columns = list(columns.values())
+        elif isinstance(columns, str):
+            target_columns = [columns]
+            source_columns = [columns]
+        elif isinstance(columns, list):
+            target_columns = columns
+            source_columns = columns
+        else:
+            raise TypeError("Columns must be a str, list, or dict")
+        mapped_nodes = self.get_mapped_nodes(
+            source, target, replace_index=True, validate="m:1"
+        )[target_columns]
         source_layer = self.get_layer(source)
-        source_layer.nodes[columns] = mapped_nodes
+        source_layer.nodes[source_columns] = mapped_nodes
 
     def apply_mask(self, layer_name, mask):
         layer = self._layers[layer_name]
@@ -402,8 +430,9 @@ class MorphSync:
         return new_morphology
 
     def get_link_as_layer(self, source, target):
-        source_index = self._layers[source].nodes_index
-        target_index = self.get_mapping(source, target)
+        mapping = self.get_mapping(source, target)
+        source_index = mapping.index
+        target_index = mapping.values
         source_nodes = self._layers[source].nodes.loc[source_index]
         target_nodes = self._layers[target].nodes.loc[target_index]
         node_positions = np.concatenate(

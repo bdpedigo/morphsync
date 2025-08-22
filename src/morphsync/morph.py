@@ -347,33 +347,10 @@ class MorphSync:
     def get_masking(self, source, target, source_index=None):
         """Gets any elements from another layer that map to any of source_index."""
 
-        # warning about pending deprecation for using this function at all:
-        print("Warning: get_masking is deprecated, use new get_mapping")
-
-        if source_index is None:
-            source_index = self._layers[source].nodes_index
-        else:
-            if not isinstance(source_index, pd.Index):
-                source_index = pd.Index(source_index)
-
-        current_index = source_index.values.copy()
-        current_index = np.unique(current_index)
-        for current_source, current_target in nx.utils.pairwise(
-            self.get_link_path(source, target)
-        ):
-            mapping_series = self._links[(current_source, current_target)].set_index(
-                current_source
-            )[current_target]
-
-            # NOTE: this is somewhat slow but not as bad as the loc
-            intersection = mapping_series.index.intersection(current_index)
-
-            # NOTE this is the slow part
-            current_index = mapping_series.loc[intersection].values
-
-            current_index = np.unique(current_index)
-
-        return current_index
+        mapping = self.get_mapping(source, target, source_index, dropna=True)
+        target_ids = mapping.values
+        target_ids = np.unique(target_ids)
+        return target_ids
 
     def get_mapped_nodes(self, source, target, source_index=None, replace_index=True):
         """

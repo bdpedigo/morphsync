@@ -30,10 +30,10 @@ class MorphSync:
         }
 
     @property
-    def layer_names(self):
+    def layer_names(self) -> list[str]:
         return list(self._layers.keys())
 
-    def has_layer(self, name):
+    def has_layer(self, name) -> bool:
         return name in self._layers
 
     def get_layer(self, name) -> FacetFrame:
@@ -42,7 +42,7 @@ class MorphSync:
         return self._layers[name]
 
     @property
-    def layer_types(self):
+    def layer_types(self) -> dict:
         return {name: layer.__class__ for name, layer in self._layers.items()}
 
     def _add_layer(self, layer, name):
@@ -61,24 +61,40 @@ class MorphSync:
             delattr(self, name)
             # TODO delete links?
 
-    def add_mesh(self, mesh, name: str, **kwargs) -> None:
+    def add_mesh(self, mesh, name: str, copy=True, **kwargs) -> None:
         native_mesh = mesh
-        mesh = Mesh(native_mesh, **kwargs)
+        mesh = Mesh(native_mesh, copy=copy, **kwargs)
         self._add_layer(mesh, name)
 
-    def add_points(self, points, name: str, **kwargs) -> None:
+    def add_points(self, points, name: str, copy=True, **kwargs) -> None:
         native_points = points
-        points = Points(native_points, **kwargs)
+        points = Points(native_points, copy=copy, **kwargs)
         self._add_layer(points, name)
 
-    def add_graph(self, graph, name: str, **kwargs) -> None:
+    def add_graph(self, graph, name: str, copy=True, **kwargs) -> None:
         native_graph = graph
-        graph = Graph(native_graph, **kwargs)
+        graph = Graph(native_graph, copy=copy, **kwargs)
         self._add_layer(graph, name)
 
-    def add_table(self, dataframe: pd.DataFrame, name: str, **kwargs) -> None:
-        table = Table(dataframe, **kwargs)
+    def add_table(
+        self, dataframe: pd.DataFrame, name: str, copy=True, **kwargs
+    ) -> None:
+        table = Table(dataframe, copy=copy, **kwargs)
         self._add_layer(table, name)
+
+    def add_layer(self, data, name: str, layer_type: str, copy=True, **kwargs) -> None:
+        if layer_type == "mesh":
+            self.add_mesh(data, name, copy=copy, **kwargs)
+        elif layer_type == "points":
+            self.add_points(data, name, copy=copy, **kwargs)
+        elif layer_type == "graph":
+            self.add_graph(data, name, copy=copy, **kwargs)
+        elif layer_type == "table":
+            self.add_table(data, name, copy=copy, **kwargs)
+        else:
+            raise ValueError(
+                "`layer_type` must be one of 'points', 'graph', 'mesh', or 'table'"
+            )
 
     def add_point_annotations(
         self,
@@ -176,7 +192,12 @@ class MorphSync:
             else:
                 raise NotImplementedError()
         elif isinstance(mapping, pd.DataFrame):
-            raise NotImplementedError()
+            if not {source, target}.issubset(mapping.columns):
+                raise ValueError(
+                    f"Mapping DataFrame must have columns '{source}' and '{target}'"
+                )
+            mapping_type = "specified"
+            mapping_df = mapping[[source, target]].copy()
         elif isinstance(mapping, pd.Series):
             mapping_type = "specified"
             # if (mapping.index.name is not None) and mapping.index.name != source:
@@ -229,6 +250,9 @@ class MorphSync:
         link_graph = nx.DiGraph()
         for (source, target), link in self._links.items():
             link_graph.add_edge(source, target)
+        for node in self._layers.keys():
+            if node not in link_graph:
+                link_graph.add_node(node)
         return link_graph
 
     def get_link_path(self, source, target):
@@ -467,7 +491,7 @@ class MorphSync:
         )
         return Graph((node_positions, edges))
 
-    def query_nodes(self, query_str, layer_name):
+    def query_nodes(self, layer_name, query_str):
         layer_query = self._layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
         return self._generate_new_morphology(layer_name, new_index)

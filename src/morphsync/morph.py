@@ -44,7 +44,7 @@ class MorphSync:
     def layer_types(self) -> dict:
         return {name: layer.__class__ for name, layer in self.layers.items()}
 
-    def _add_layer(self, layer, name):
+    def _add_layer(self, name, layer):
         self.layers[name] = layer
         self.__setattr__(name, layer)
         for (
@@ -60,62 +60,40 @@ class MorphSync:
             delattr(self, name)
             # TODO delete links?
 
-    def add_mesh(self, mesh, name: str, copy=True, **kwargs) -> None:
+    def add_mesh(self, name: str, mesh, copy=True, **kwargs) -> None:
         native_mesh = mesh
         mesh = Mesh(native_mesh, copy=copy, **kwargs)
-        self._add_layer(mesh, name)
+        self._add_layer(name, mesh)
 
-    def add_points(self, points, name: str, copy=True, **kwargs) -> None:
+    def add_points(self, name: str, points, copy=True, **kwargs) -> None:
         native_points = points
         points = Points(native_points, copy=copy, **kwargs)
-        self._add_layer(points, name)
+        self._add_layer(name, points)
 
-    def add_graph(self, graph, name: str, copy=True, **kwargs) -> None:
+    def add_graph(self, name: str, graph, copy=True, **kwargs) -> None:
         native_graph = graph
         graph = Graph(native_graph, copy=copy, **kwargs)
-        self._add_layer(graph, name)
+        self._add_layer(name, graph)
 
     def add_table(
-        self, dataframe: pd.DataFrame, name: str, copy=True, **kwargs
+        self, name: str, dataframe: pd.DataFrame, copy=True, **kwargs
     ) -> None:
         table = Table(dataframe, copy=copy, **kwargs)
-        self._add_layer(table, name)
+        self._add_layer(name, table)
 
-    def add_layer(self, data, name: str, layer_type: str, copy=True, **kwargs) -> None:
+    def add_layer(self, name: str, data, layer_type: str, copy=True, **kwargs) -> None:
         if layer_type == "mesh":
-            self.add_mesh(data, name, copy=copy, **kwargs)
+            self.add_mesh(name, data, copy=copy, **kwargs)
         elif layer_type == "points":
-            self.add_points(data, name, copy=copy, **kwargs)
+            self.add_points(name, data, copy=copy, **kwargs)
         elif layer_type == "graph":
-            self.add_graph(data, name, copy=copy, **kwargs)
+            self.add_graph(name, data, copy=copy, **kwargs)
         elif layer_type == "table":
-            self.add_table(data, name, copy=copy, **kwargs)
+            self.add_table(name, data, copy=copy, **kwargs)
         else:
             raise ValueError(
                 "`layer_type` must be one of 'points', 'graph', 'mesh', or 'table'"
             )
-
-    def add_point_annotations(
-        self,
-        point_annotations: pd.DataFrame,
-        spatial_columns: list,
-        name: str,
-        annotations_suffix: str = "_annotations",
-        **kwargs,
-    ) -> None:
-        """
-        Add point annotations as a new point layer and new table with a link to
-        those points.
-        """
-        spatial_points = point_annotations[spatial_columns]
-        non_spatial_columns = point_annotations.columns.difference(spatial_columns)
-        annotations = point_annotations[non_spatial_columns]
-        self.add_points(spatial_points, name, **kwargs)
-        self.add_table(
-            annotations,
-            name + annotations_suffix,
-        )
-        self.add_link(name, name + annotations_suffix, mapping="index", reciprocal=True)
 
     def add_link(self, source, target, mapping="closest", reciprocal=True):
         # TODO
@@ -211,7 +189,7 @@ class MorphSync:
     @property
     def link_graph(self) -> nx.DiGraph:
         link_graph = nx.DiGraph()
-        for (source, target) in self.links.keys():
+        for source, target in self.links.keys():
             link_graph.add_edge(source, target)
         for node in self.layers.keys():
             if node not in link_graph:
@@ -420,7 +398,8 @@ class MorphSync:
     def _generate_new_morphology(self, layer_name, new_index):
         new_morphology = self.__class__(**self.get_params())
         new_morphology._add_layer(
-            self.layers[layer_name].mask_by_node_index(new_index), layer_name
+            layer_name,
+            self.layers[layer_name].mask_by_node_index(new_index),
         )
         for other_layer_name, other_layer in self.layers.items():
             if other_layer_name != layer_name:
@@ -428,7 +407,7 @@ class MorphSync:
                     layer_name, other_layer_name, source_index=new_index
                 )
                 new_morphology._add_layer(
-                    other_layer.mask_by_node_index(other_indices), other_layer_name
+                    other_layer_name, other_layer.mask_by_node_index(other_indices)
                 )
         new_morphology.links = self.links
 

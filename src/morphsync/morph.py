@@ -16,13 +16,12 @@ from .table import Table
 class MorphSync:
     def __init__(self, name=None):
         self.name = name
-        self._layers = {}
-        self._links = {}
-        self._link_origins = {}
+        self.layers = {}
+        self.links = {}
         self._delayed_add_links = {}
 
     def __repr__(self):
-        return f"MorphLink(name={self.name}, layers={list(self._layers.keys())})"
+        return f"MorphLink(name={self.name}, layers={list(self.layers.keys())})"
 
     def get_params(self):
         return {
@@ -31,22 +30,22 @@ class MorphSync:
 
     @property
     def layer_names(self) -> list[str]:
-        return list(self._layers.keys())
+        return list(self.layers.keys())
 
     def has_layer(self, name) -> bool:
-        return name in self._layers
+        return name in self.layers
 
     def get_layer(self, name) -> FacetFrame:
-        if name not in self._layers:
+        if name not in self.layers:
             raise KeyError(f"Layer '{name}' does not exist.")
-        return self._layers[name]
+        return self.layers[name]
 
     @property
     def layer_types(self) -> dict:
-        return {name: layer.__class__ for name, layer in self._layers.items()}
+        return {name: layer.__class__ for name, layer in self.layers.items()}
 
     def _add_layer(self, layer, name):
-        self._layers[name] = layer
+        self.layers[name] = layer
         self.__setattr__(name, layer)
         for (
             delayed_source,
@@ -56,8 +55,8 @@ class MorphSync:
                 add_link_func()
 
     def drop_layer(self, name):
-        if name in self._layers:
-            del self._layers[name]
+        if name in self.layers:
+            del self.layers[name]
             delattr(self, name)
             # TODO delete links?
 
@@ -118,36 +117,22 @@ class MorphSync:
         )
         self.add_link(name, name + annotations_suffix, mapping="index", reciprocal=True)
 
-    @property
-    def layers(self) -> pd.DataFrame:
-        layers = {}
-        for name, layer in self._layers.items():
-            layers[name] = {
-                "layer": layer.__repr__(),
-                "layer_type": layer.__class__.__name__,
-            }
-
-        layers = pd.DataFrame(layers).T
-        layers.index.name = "name"
-        return layers
-
     def add_link(self, source, target, mapping="closest", reciprocal=True):
         # TODO
         # raise TypeError(
         #     "mapping must be a str, np.ndarray, pd.DataFrame, pd.Series, pd.Index, or dict"
         # )
-        if source not in self._layers or target not in self._layers:
+        if source not in self.layers or target not in self.layers:
             delayed_add_link = partial(
                 self.add_link, source, target, mapping, reciprocal
             )
             self._delayed_add_links[(source, target)] = delayed_add_link
             return
 
-        source_layer = self._layers[source]
-        target_layer = self._layers[target]
+        source_layer = self.layers[source]
+        target_layer = self.layers[target]
 
         if isinstance(mapping, str):
-            mapping_type = mapping
             if mapping == "closest":
                 mapping_array = project_points_to_nearest(
                     source_layer.points, target_layer.points
@@ -176,7 +161,6 @@ class MorphSync:
             elif mapping == "order":
                 raise NotImplementedError()
         elif isinstance(mapping, np.ndarray):
-            mapping_type = "specified"
             # assumes that the mapping is a 1d array where the index is on source
             # vertices, and the value is the index on target vertices
             if mapping.ndim == 1:
@@ -196,10 +180,8 @@ class MorphSync:
                 raise ValueError(
                     f"Mapping DataFrame must have columns '{source}' and '{target}'"
                 )
-            mapping_type = "specified"
             mapping_df = mapping[[source, target]].copy()
         elif isinstance(mapping, pd.Series):
-            mapping_type = "specified"
             # if (mapping.index.name is not None) and mapping.index.name != source:
             #     raise UserWarning(
             #         f"Index name of mapping Series ({mapping.index.name}) does not match source layer name ({source})."
@@ -214,43 +196,24 @@ class MorphSync:
         elif isinstance(mapping, pd.Index):
             raise NotImplementedError()
         elif isinstance(mapping, dict):
-            mapping_type = "specified"
             mapping_df = pd.Series(mapping)
             mapping_df.index.name = source
             mapping_df.name = target
             mapping_df = mapping_df.to_frame().reset_index()
 
-        self._links[(source, target)] = mapping_df
-        self._link_origins[(source, target)] = mapping_type
+        self.links[(source, target)] = mapping_df
         if reciprocal:
-            self._links[(target, source)] = mapping_df
-            self._link_origins[(target, source)] = mapping_type
+            self.links[(target, source)] = mapping_df
 
     def get_link(self, source, target):
-        return self._links[(source, target)]
-
-    @property
-    def links(self):
-        rows = []
-        for (source, target), link in self._links.items():
-            rows.append(
-                {
-                    "source": source,
-                    "target": target,
-                    "link": link,
-                    "link_origin": self._link_origins[(source, target)],
-                }
-            )
-
-        links = pd.DataFrame(rows).set_index(["source", "target"])
-        return links
+        return self.links[(source, target)]
 
     @property
     def link_graph(self) -> nx.DiGraph:
         link_graph = nx.DiGraph()
-        for (source, target), link in self._links.items():
+        for (source, target) in self.links.keys():
             link_graph.add_edge(source, target)
-        for node in self._layers.keys():
+        for node in self.layers.keys():
             if node not in link_graph:
                 link_graph.add_node(node)
         return link_graph
@@ -299,7 +262,7 @@ class MorphSync:
             source layer. Format depends on null_strategy parameter.
         """
         if source_index is None:
-            source_index = self._layers[source].nodes_index
+            source_index = self.layers[source].nodes_index
         else:
             if not isinstance(source_index, pd.Index):
                 source_index = pd.Index(source_index)
@@ -310,7 +273,7 @@ class MorphSync:
             self.get_link_path(source, target)
         ):
             mapping_series = (
-                self._links[(current_source, current_target)]
+                self.links[(current_source, current_target)]
                 .set_index(current_source)[current_target]
                 .astype("Int64")  # Use nullable integers internally
             )
@@ -409,13 +372,13 @@ class MorphSync:
         layer.
         """
         if source_index is None:
-            source_index = self._layers[source].nodes_index
+            source_index = self.layers[source].nodes_index
 
         mapping = self.get_mapping(
             source, target, source_index, validate=validate, null_strategy="drop"
         )
         target_index = mapping.values
-        out = self._layers[target].nodes.reindex(target_index)
+        out = self.layers[target].nodes.reindex(target_index)
         if replace_index:
             out = out.set_index(mapping.index)
         return out
@@ -447,7 +410,7 @@ class MorphSync:
         source_layer.nodes[source_columns] = mapped_nodes
 
     def apply_mask(self, layer_name, mask):
-        layer = self._layers[layer_name]
+        layer = self.layers[layer_name]
         new_index = layer.nodes.index[mask]
         return self._generate_new_morphology(layer_name, new_index)
 
@@ -457,9 +420,9 @@ class MorphSync:
     def _generate_new_morphology(self, layer_name, new_index):
         new_morphology = self.__class__(**self.get_params())
         new_morphology._add_layer(
-            self._layers[layer_name].mask_by_node_index(new_index), layer_name
+            self.layers[layer_name].mask_by_node_index(new_index), layer_name
         )
-        for other_layer_name, other_layer in self._layers.items():
+        for other_layer_name, other_layer in self.layers.items():
             if other_layer_name != layer_name:
                 other_indices = self.get_masking(
                     layer_name, other_layer_name, source_index=new_index
@@ -467,7 +430,7 @@ class MorphSync:
                 new_morphology._add_layer(
                     other_layer.mask_by_node_index(other_indices), other_layer_name
                 )
-        new_morphology._links = self._links
+        new_morphology.links = self.links
 
         return new_morphology
 
@@ -475,8 +438,8 @@ class MorphSync:
         mapping = self.get_mapping(source, target, null_strategy="drop")
         source_index = mapping.index
         target_index = mapping.values
-        source_nodes = self._layers[source].nodes.loc[source_index]
-        target_nodes = self._layers[target].nodes.loc[target_index]
+        source_nodes = self.layers[source].nodes.loc[source_index]
+        target_nodes = self.layers[target].nodes.loc[target_index]
         node_positions = np.concatenate(
             [source_nodes.values, target_nodes.values], axis=0
         )
@@ -492,6 +455,6 @@ class MorphSync:
         return Graph((node_positions, edges))
 
     def query_nodes(self, layer_name, query_str):
-        layer_query = self._layers[layer_name].query_nodes(query_str)
+        layer_query = self.layers[layer_name].query_nodes(query_str)
         new_index = layer_query.nodes.index
         return self._generate_new_morphology(layer_name, new_index)

@@ -62,6 +62,8 @@ class FacetFrame:
         facets,
         spatial_columns: Optional[list] = None,
         relation_columns: Optional[list] = None,
+        copy=True,
+        **kwargs,
     ):
         if not isinstance(nodes, pd.DataFrame):
             if isinstance(nodes, np.ndarray):
@@ -78,6 +80,9 @@ class FacetFrame:
             #         raise ValueError(
             #             "If spatial_columns is not provided, nodes must have 3 columns"
             #         )
+
+        if copy:
+            nodes = nodes.copy()
         self.nodes: pd.DataFrame = nodes
 
         if spatial_columns is None:
@@ -90,6 +95,8 @@ class FacetFrame:
             facets = pd.DataFrame(facets)
             if relation_columns is None:
                 relation_columns = facets.columns.tolist()
+        if copy:
+            facets = facets.copy()
         self.facets: pd.DataFrame = facets
 
         if relation_columns is None:
@@ -114,11 +121,6 @@ class FacetFrame:
     def points(self) -> np.ndarray:
         """Alias for vertices"""
         return self.vertices
-
-    # @property
-    # def points_df(self):
-    #     """Alias for vertices_df"""
-    #     return self.vertices_df
 
     @property
     def n_nodes(self) -> int:
@@ -193,8 +195,13 @@ class FacetFrame:
         out = self.__class__((new_nodes, new_facets), **self.get_params())
         return out
 
+    @property
+    def layer_type(self) -> str:
+        return str(self.__class__).strip(">'").split(".")[-1].lower()
+
     def get_params(self):
         return {
+            "layer_type": self.layer_type,
             "spatial_columns": self.spatial_columns,
             "relation_columns": self.relation_columns,
         }

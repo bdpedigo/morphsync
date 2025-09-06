@@ -62,7 +62,7 @@ class FacetFrame:
         facets,
         spatial_columns: Optional[list] = None,
         relation_columns: Optional[list] = None,
-        inplace_data: bool = False,
+        copy: bool = False,
     ):
         if not isinstance(nodes, pd.DataFrame):
             if isinstance(nodes, np.ndarray):
@@ -180,17 +180,6 @@ class FacetFrame:
         new_facets = self.facets[
             self.facets[self.relation_columns].isin(new_index).all(axis=1)
         ]
-
-        # new  node_mapping = {k: v for v, k in enumerate(new_index)}
-        # select_facets = self.facets[self.facets.isin(new_index).all(axis=1)]
-        # select_facet_array = select_facets[self.relation_columns].values
-        # # new_facets = fastremap.remap(select_facets, node_mapping)
-        # new_facet_array = np.vectorize(
-        #     lambda x: node_mapping.get(x, -1), otypes=[select_facet_array.dtype]
-        # )(select_facet_array)
-        # new_facets = select_facets.copy()
-        # new_facets[self.relation_columns] = new_facet_array
-        # print(self.get_params())
         out = self.__class__((new_nodes, new_facets), **self.get_params())
         return out
 
@@ -200,7 +189,6 @@ class FacetFrame:
 
     def get_params(self):
         return {
-            "layer_type": self.layer_type,
             "spatial_columns": self.spatial_columns,
             "relation_columns": self.relation_columns,
         }

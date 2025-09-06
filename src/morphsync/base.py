@@ -62,6 +62,7 @@ class FacetFrame:
         facets,
         spatial_columns: Optional[list] = None,
         relation_columns: Optional[list] = None,
+        inplace_data: bool = False,
     ):
         if not isinstance(nodes, pd.DataFrame):
             if isinstance(nodes, np.ndarray):
@@ -78,7 +79,10 @@ class FacetFrame:
             #         raise ValueError(
             #             "If spatial_columns is not provided, nodes must have 3 columns"
             #         )
-        self.nodes: pd.DataFrame = nodes.copy()
+        if not inplace_data:
+            self.nodes: pd.DataFrame = nodes.copy()
+        else:
+            self.nodes = nodes
 
         if spatial_columns is None:
             spatial_columns = []
@@ -90,7 +94,10 @@ class FacetFrame:
             facets = pd.DataFrame(facets)
             if relation_columns is None:
                 relation_columns = facets.columns.tolist()
-        self.facets: pd.DataFrame = facets
+        if inplace_data:
+            self.facets: pd.DataFrame = facets
+        else:
+            self.facets = facets.copy()
 
         if relation_columns is None:
             relation_columns = []

@@ -15,6 +15,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 version = "0.1.0"
 
+[project.urls]
+Repository = "https://github.com/bdpedigo/morphsync"
+Homepage = "https://github.com/bdpedigo/morphsync"
+Documentation = "https://bdpedigo.github.io/morphsync/"
+Issues = "https://github.com/bdpedigo/morphsync/issues"
+
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]

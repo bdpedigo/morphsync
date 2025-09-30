@@ -3,9 +3,13 @@ repo_url: https://github.com/bdpedigo/morphsync/
 repo_name: bdpedigo/morphsync
 edit_uri: edit/main/docs/
 nav:
-  - index.md
-  - Examples:
-    - examples/microns_example.ipynb
+  - Home: index.md
+  - User Guide: user_guide.md
+  - API Reference: api.md
+  - Examples: 
+    - examples.md
+    - Notebooks:
+      - examples/microns_example.ipynb
 theme:
   name: material
   language: en

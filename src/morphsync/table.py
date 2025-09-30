@@ -1,15 +1,28 @@
-from .base import FacetFrame
+from .base import Layer
 
 
-class Table(FacetFrame):
-    def __init__(self, dataframe, *args, **kwargs):
-        if isinstance(dataframe, tuple):
-            dataframe = dataframe[0]
-        super().__init__(dataframe, None, *args, **kwargs)
+class Table(Layer):
+    def __init__(self, table, *args, **kwargs):
+        """Initialize a Table layer.
 
-    def __repr__(self):
+        Parameters
+        ----------
+        table : pd.DataFrame or tuple
+            DataFrame containing tabular data, or tuple containing the DataFrame.
+        *args : tuple
+            Additional arguments passed to the parent Layer class.
+        **kwargs : dict
+            Additional keyword arguments passed to the parent Layer class.
+        """
+        if isinstance(table, tuple):
+            table = table[0]
+        super().__init__(table, None, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        """Return a string representation of the Table."""
         return f"Table(rows={len(self.nodes)})"
 
     @property
     def table(self):
+        """Access the table data as a DataFrame. Alias for nodes."""
         return self.nodes

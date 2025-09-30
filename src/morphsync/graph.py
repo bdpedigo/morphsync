@@ -1,10 +1,23 @@
 import numpy as np
+import pandas as pd
 
-from .base import FacetFrame
+from .base import Layer
 
 
-class Graph(FacetFrame):
+class Graph(Layer):
     def __init__(self, graph, *args, **kwargs):
+        """Initialize a Graph layer.
+
+        Parameters
+        ----------
+        graph : object or tuple
+            Either an object with 'vertices' and 'edges' attributes, or a tuple
+            of (vertices, edges).
+        *args : tuple
+            Additional arguments passed to the parent Layer class.
+        **kwargs : dict
+            Additional keyword arguments passed to the parent Layer class.
+        """
         if hasattr(graph, "vertices") and hasattr(graph, "edges"):
             vertices = graph.vertices
             edges = graph.edges
@@ -14,18 +27,22 @@ class Graph(FacetFrame):
         self._graph = graph
 
     def __repr__(self):
+        """Return a string representation of the Graph."""
         return f"Graph(nodes={self.nodes.shape}, edges={self.edges.shape})"
 
     @property
-    def n_edges(self):
+    def n_edges(self) -> int:
+        """Number of edges in the graph."""
         return len(self.edges)
 
     @property
-    def edges(self):
+    def edges(self) -> np.ndarray:
+        """Edges as a numpy array of shape (n_edges, 2)."""
         return self.edges_df.values
 
     @property
-    def edges_df(self):
+    def edges_df(self) -> pd.DataFrame:
+        """Edges as a DataFrame containing node indices."""
         return (
             self.facets[self.relation_columns]
             if self.relation_columns is not None
@@ -33,10 +50,27 @@ class Graph(FacetFrame):
         )
 
     @property
-    def edges_positional(self):
+    def edges_positional(self) -> np.ndarray:
+        """Edges in positional indexing."""
         return np.vectorize(self.nodes.index.get_loc)(self.edges)
 
     def to_adjacency(self, return_as="csr", weights=None, symmetrize=False):
+        """Convert the graph to an adjacency matrix.
+
+        Parameters
+        ----------
+        return_as : str, default "csr"
+            Format to return the adjacency matrix. Currently only "csr" is supported.
+        weights : str, optional
+            Column name in facets to use as edge weights. If None, uses unit weights.
+        symmetrize : bool, default False
+            If True, add reverse edges to make the graph symmetric.
+
+        Returns
+        -------
+        scipy.sparse.csr_array
+            Sparse adjacency matrix of shape (n_nodes, n_nodes).
+        """
         if return_as == "csr":
             from scipy.sparse import csr_array
 
@@ -58,9 +92,18 @@ class Graph(FacetFrame):
             return csr_array(
                 (data, (edges_positional[:, 0], edges_positional[:, 1])), shape=(n, n)
             )
+        else:
+            raise ValueError(f"Unsupported return_as format {return_as}")
 
     @property
     def is_spatially_valid(self):
+        """Check if the graph has valid spatial structure.
+
+        Returns
+        -------
+        bool
+            True if vertices are 3D and both vertices and edges are non-empty.
+        """
         is_valid = self.vertices.shape[1] == 3 and self.vertices.shape[0] > 0
         is_valid &= self.edges.shape[1] == 2 and self.edges.shape[0] > 0
         return is_valid

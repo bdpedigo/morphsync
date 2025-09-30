@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
-from .base import FacetFrame
+from .base import Layer
 from .graph import Graph
 from .mapping import project_points_to_nearest
 from .mesh import Mesh
@@ -15,15 +15,30 @@ from .table import Table
 
 class MorphSync:
     def __init__(self, name=None):
+        """Initialize a MorphSync container for multi-layer morphological data.
+
+        Parameters
+        ----------
+        name : str, optional
+            Name identifier for this morphology container.
+        """
         self.name = name
         self.layers = {}
         self.links = {}
         self._delayed_add_links = {}
 
-    def __repr__(self):
-        return f"MorphLink(name={self.name}, layers={list(self.layers.keys())})"
+    def __repr__(self) -> str:
+        """Return a string representation of the MorphSync."""
+        return f"MorphSync(name={self.name}, layers={list(self.layers.keys())})"
 
     def get_params(self):
+        """Get the parameters used to initialize this MorphSync container.
+
+        Returns
+        -------
+        dict
+            Dictionary containing initialization parameters.
+        """
         return {
             "name": self.name,
         }
@@ -35,7 +50,7 @@ class MorphSync:
     def has_layer(self, name) -> bool:
         return name in self.layers
 
-    def get_layer(self, name) -> FacetFrame:
+    def get_layer(self, name) -> Layer:
         if name not in self.layers:
             raise KeyError(f"Layer '{name}' does not exist.")
         return self.layers[name]

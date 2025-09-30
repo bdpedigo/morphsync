@@ -28,17 +28,20 @@ jobs:
             - name: Get gh-pages branch
               run: git fetch origin gh-pages --depth=1
 
-            - name: Configure git for github-actions[bot]
-              run: |
-                  git config --global user.name "github-actions[bot]"
-                  git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            # - name: Configure git for github-actions[bot]
+            #   run: |
+            #       git config --global user.name "github-actions[bot]"
+            #       git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
             - name: Install the latest version of uv
               id: setup-uv
               uses: astral-sh/setup-uv@v6
 
             - name: Set up Python
-              run: uv sync --python ${{ matrix.python-version }}
+              run: uv sync --python ${{ matrix.python-version }} --all-extras
 
-            - name: Install dependencies
+            - name: Build docs
+              run: uv run mkdocs build
+
+            - name: Publish docs
               run: uv run mkdocs gh-deploy --force --remote-branch gh-pages --remote-name origin

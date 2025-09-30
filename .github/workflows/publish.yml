@@ -11,6 +11,34 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
+            - name: Extract release tag version
+              id: release
+              run: |
+                  # GITHUB_REF is refs/tags/v0.1.1 for a release
+                  TAG="${GITHUB_REF#refs/tags/}"
+                  echo "tag=${TAG}" >> $GITHUB_OUTPUT
+                  # Strip leading "v"
+                  VERSION="${TAG#v}"
+                  echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+            - name: Read version from pyproject.toml
+              id: pyproject
+              run: |
+                  PY_VERSION=$(grep -Po '(?<=^version = ")[^"]+' pyproject.toml)
+                  echo "version=${PY_VERSION}" >> $GITHUB_OUTPUT
+
+            - name: Compare versions
+              run: |
+                  RELEASE_VERSION="${{ steps.release.outputs.version }}"
+                  PYPROJECT_VERSION="${{ steps.pyproject.outputs.version }}"
+                  echo "Release version: $RELEASE_VERSION"
+                  echo "pyproject.toml version: $PYPROJECT_VERSION"
+                  if [ "$RELEASE_VERSION" != "$PYPROJECT_VERSION" ]; then
+                      echo "❌ Version mismatch!"
+                      exit 1
+                  fi
+                  echo "✅ Versions match!"
+
             - name: Install uv
               uses: astral-sh/setup-uv@v6
               with:

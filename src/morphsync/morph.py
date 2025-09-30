@@ -207,6 +207,7 @@ class MorphSync:
         target: str,
         source_index: Optional[Union[np.ndarray, pd.Index]] = None,
         validate=None,
+        null_strategy: str = "drop",
     ) -> pd.DataFrame:
         """
         Find mappings from source to target layers using the entire link graph, and
@@ -224,20 +225,22 @@ class MorphSync:
         validate : str, optional
             Whether to validate the mapping at each step. If specified, checks if each
             mapping between layers is of the specified type. Options are:
-            - “one_to_one” or “1:1”: check if join keys are unique in both source and target layers.
-            - “one_to_many” or “1:m”: check if join keys are unique in the source dataset.
-            - “many_to_one” or “m:1”: check if join keys are unique in the target dataset.
-            - “many_to_many” or “m:m”: allowed, but does not result in checks.
+            - "one_to_one" or "1:1": check if join keys are unique in both source and target layers.
+            - "one_to_many" or "1:m": check if join keys are unique in the source dataset.
+            - "many_to_one" or "m:1": check if join keys are unique in the target dataset.
+            - "many_to_many" or "m:m": allowed, but does not result in checks.
+        null_strategy : str, default "drop"
+            How to handle incomplete mappings:
+            - "drop": Remove rows with any null mappings
+            - "keep": Return with NaN values for missing mappings
+            - "sentinel": Use -1 for missing mappings (backward compatibility)
 
         Returns
         -------
         :
             Mapped indices in the target layer corresponding to the source_index in the
-            source layer. Note that there may be duplicates or -1 values if the
-            mapping is not one-to-one. -1 denotes null or no mapping.
+            source layer. Format depends on null_strategy parameter.
         """
-        # TODO: make this operate on the mappings themselves and then only apply to
-        # the index at the end
         if source_index is None:
             source_index = self.layers[source].nodes_index
         else:
@@ -252,9 +255,7 @@ class MorphSync:
             mapping_series = (
                 self.links[(current_source, current_target)]
                 .set_index(current_source)[current_target]
-                .drop(
-                    -1, errors="ignore"
-                )  # not sure if necessary but being safe for now
+                .astype("Int64")  # Use nullable integers internally
             )
             # catch pandas MergeError due to validate here, raise a more informative error
 
@@ -267,15 +268,30 @@ class MorphSync:
                     f"Mapping from '{current_source}' to '{current_target}' failed validation '{validate}'."
                 ) from e
 
-            # TODO decide whether to use -1 or NaN for unmapped
-            joined_mapping[current_target] = (
-                joined_mapping[current_target].fillna(-1).astype(int)
-            )
         joined_mapping = joined_mapping.loc[source_index]
+
+        # Apply null strategy at the end
+        match null_strategy:
+            case "drop":
+                return joined_mapping.dropna()
+            case "keep":
+                return joined_mapping  # Keep NaN/pd.NA values
+            case "sentinel":
+                return joined_mapping.fillna(-1).astype(int)  # Legacy behavior
+            case _:
+                raise ValueError(
+                    f"Unknown null_strategy: {null_strategy}. Use 'drop', 'keep', or 'sentinel'."
+                )
+
         return joined_mapping
 
     def get_mapping(
-        self, source: str, target: str, source_index=None, validate=None, dropna=True
+        self,
+        source: str,
+        target: str,
+        source_index=None,
+        validate=None,
+        null_strategy: str = "drop",
     ) -> pd.Series:
         """
         Find mappings from source to target layers using the entire link graph.
@@ -292,36 +308,38 @@ class MorphSync:
         validate : str, optional
             Whether to validate the mapping at each step. If specified, checks if each
             mapping between layers is of the specified type. Options are:
-            - “one_to_one” or “1:1”: check if join keys are unique in both source and target layers.
-            - “one_to_many” or “1:m”: check if join keys are unique in the source dataset.
-            - “many_to_one” or “m:1”: check if join keys are unique in the target dataset.
-            - “many_to_many” or “m:m”: allowed, but does not result in checks.
-        dropna : bool, default True
-            Whether to drop -1/null values (no mapping) from the output.
+            - "one_to_one" or "1:1": check if join keys are unique in both source and target layers.
+            - "one_to_many" or "1:m": check if join keys are unique in the source dataset.
+            - "many_to_one" or "m:1": check if join keys are unique in the target dataset.
+            - "many_to_many" or "m:m": allowed, but does not result in checks.
+        null_strategy : str, default "drop"
+            How to handle incomplete mappings:
+            - "drop": Remove entries with null mappings
+            - "keep": Return with NaN values for missing mappings
+            - "sentinel": Use -1 for missing mappings (backward compatibility)
 
         Returns
         -------
         :
             Series with nodes in the source layer as the index and mapped nodes in
-            the target layer as the values. Note that there may be duplicates or -1
-            values if the mapping is not one-to-one. -1 denotes null or no mapping.
+            the target layer as the values. Format depends on null_strategy parameter.
 
         Notes
         -----
-        This function is a convenience wrapper around `get_mapping_path` that returns
+        This function is a convenience wrapper around `get_mapping_paths` that returns
         just the final mapping as a Series. If you need to see the full mapping at
-        each step, use `get_mapping_path`.
+        each step, use `get_mapping_paths`.
         """
-        mapping_path = self.get_mapping_paths(source, target, source_index, validate)
+        mapping_path = self.get_mapping_paths(
+            source, target, source_index, validate, null_strategy
+        )
         mapping = mapping_path.set_index(source)[target]
-        if dropna:
-            mapping = mapping[mapping != -1]
         return mapping
 
     def get_masking(self, source, target, source_index=None):
         """Gets any elements from another layer that map to any of source_index."""
 
-        mapping = self.get_mapping(source, target, source_index, dropna=True)
+        mapping = self.get_mapping(source, target, source_index, null_strategy="drop")
         target_ids = mapping.values
         target_ids = np.unique(target_ids)
         return target_ids
@@ -337,7 +355,7 @@ class MorphSync:
             source_index = self.layers[source].nodes_index
 
         mapping = self.get_mapping(
-            source, target, source_index, validate=validate, dropna=True
+            source, target, source_index, validate=validate, null_strategy="drop"
         )
         target_index = mapping.values
         out = self.layers[target].nodes.reindex(target_index)
@@ -398,7 +416,7 @@ class MorphSync:
         return new_morphology
 
     def get_link_as_layer(self, source, target):
-        mapping = self.get_mapping(source, target)
+        mapping = self.get_mapping(source, target, null_strategy="drop")
         source_index = mapping.index
         target_index = mapping.values
         source_nodes = self.layers[source].nodes.loc[source_index]

@@ -62,7 +62,8 @@ class FacetFrame:
         facets,
         spatial_columns: Optional[list] = None,
         relation_columns: Optional[list] = None,
-        copy: bool = False,
+        copy=True,
+        **kwargs,
     ):
         if not isinstance(nodes, pd.DataFrame):
             if isinstance(nodes, np.ndarray):
@@ -189,6 +190,7 @@ class FacetFrame:
 
     def get_params(self):
         return {
+            "layer_type": self.layer_type,
             "spatial_columns": self.spatial_columns,
             "relation_columns": self.relation_columns,
         }

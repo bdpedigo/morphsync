@@ -45,6 +45,8 @@ class MorphSync:
         return {name: layer.__class__ for name, layer in self.layers.items()}
 
     def _add_layer(self, name, layer):
+        if not isinstance(name, str): 
+            raise ValueError("Layer name must be a string.")
         self.layers[name] = layer
         self.__setattr__(name, layer)
         for (
@@ -76,9 +78,9 @@ class MorphSync:
         self._add_layer(name, graph)
 
     def add_table(
-        self, name: str, dataframe: pd.DataFrame, copy=True, **kwargs
+        self, name: str, table: pd.DataFrame, copy=True, **kwargs
     ) -> None:
-        table = Table(dataframe, copy=copy, **kwargs)
+        table = Table(table, copy=copy, **kwargs)
         self._add_layer(name, table)
 
     def add_layer(self, name: str, data, layer_type: str, copy=True, **kwargs) -> None:

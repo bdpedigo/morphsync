@@ -1,15 +1,16 @@
 site_name: Morphsync
+# site_url: https://bdpedigo.github.io
 repo_url: https://github.com/bdpedigo/morphsync/
 repo_name: bdpedigo/morphsync
 edit_uri: edit/main/docs/
 nav:
   - Home: index.md
-  - User Guide: user_guide.md
+  - Tutorial: tutorial.md
+  - Examples:
+    - examples/examples.md
+    - examples/microns_example.ipynb
   - API Reference: api.md
-  - Examples: 
-    - examples.md
-    - Notebooks:
-      - examples/microns_example.ipynb
+
 theme:
   name: material
   language: en
@@ -48,9 +49,10 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.details
+  - pymdownx.snippets
   - admonition
   - toc:
-      baselevel: 2
+      baselevel: 1
       permalink: true
   - meta
 plugins:
@@ -77,7 +79,7 @@ plugins:
               ignore_init_summary: false
             merge_init_into_class: false
             allow_section_blank_line: false
-            show_root_heading: false
+            show_root_heading: true
             show_root_toc_entry: false
             show_object_full_path: false
             show_symbol_type_heading: false # whether to show "meth/func/etc" in the page
@@ -110,3 +112,4 @@ extra:
 watch:
   - src/
   - docs/
+  - README.md

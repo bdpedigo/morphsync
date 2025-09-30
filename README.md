@@ -1,14 +1,16 @@
 # MorphSync
 
-MorphSync is a Python library for working with multi-layered morphological data structures. It provides a unified framework for managing and synchronizing different representations of morphological data such as meshes, point clouds, graphs, and tabular data.
+MorphSync is a Python library for working with multi-layered morphological data.
+It provides a unified framework for managing and synchronizing different representations
+of morphological data such as meshes, point clouds, graphs, and tabular data.
 
 ## Key Features
 
 - **Multi-layer data management**: Handle meshes, point clouds, graphs, and tables in a unified framework
-- **Automatic mapping**: Create and manage mappings between different data layers
-- **Spatial operations**: Built-in support for spatial queries and nearest neighbor operations
-- **Flexible data structures**: Work with pandas DataFrames and numpy arrays seamlessly
-- **Graph-based linking**: Use graph algorithms to find mappings across multiple layers
+- **Linking**: Create and manage mappings between different data layers
+- **Link-based operations**: Apply masks/selections or features from one data layer to another
+- **Transitivity**: Easily apply transitive mappings across multiple layers
+- **Lightweight**: Intentionally light on algorithms, use your own tools but stop worrying about mappings
 
 ## Quick Start
 
@@ -18,16 +20,35 @@ from morphsync import MorphSync
 # Create a new morphology container
 morphology = MorphSync(name=12345678)
 
+mesh_data # object with vertices and faces
+point_data # dataframe of points with optional features
+graph_data # object with nodes and edges, either with optional features
+
 # Add different layers
 morphology.add_mesh("mesh", mesh_data)
-morphology.add_points("synapses", point_data)
-morphology.add_graph("skeleton", graph_data)
+morphology.add_points("synapses",
+    point_data, 
+    spatial_columns=["x", "y", "z"],
+)
+morphology.add_graph("skeleton",
+    graph_data,
+    spatial_columns=["x", "y", "z"],
+    relation_columns=["source", "target"],
+)
+
+synapse_to_mesh_mapping # series mapping synapse indices to mesh indices
+mesh_to_skeleton_mapping # series mapping mesh indices to skeleton indices
 
 # Create mappings between layers
 morphology.add_link("synapses", "mesh", mapping=synapse_to_mesh_mapping)
+morphology.add_link("mesh", "skeleton", mapping=mesh_to_skeleton_mapping)
 
-# Query mappings
-mapping = morphology.get_mapping("synapses", "mesh")
+# Select all aspects of the morphology that map to the skeleton's axon labeling
+# Note that transitive mapping (synapses <-> mesh <-> skeleton) works here!
+mapping = morphology.query_nodes("skeleton", "compartment == 'axon'")
+
+# Add a column to synapses which indicates the local skeleton radius
+morphology.assign_from_mapping("synapses", "skeleton", ["radius"])
 ```
 
 ## Core Concepts
@@ -36,10 +57,10 @@ mapping = morphology.get_mapping("synapses", "mesh")
 
 MorphSync organizes data into **layers**, where each layer represents a different aspect of morphological data:
 
-- **Mesh**: 3D surface representations with vertices and faces
+- **Table**: Tabular data without a spatial component
 - **Points**: Point clouds such as annotations
 - **Graph**: Network structures like skeletons or connectivity graphs
-- **Table**: Tabular data without a spatial component
+- **Mesh**: 3D surface representations with vertices and faces
 
 Note that it's possible to have multiple layers of the same type (e.g., multiple skeleton layers).
 

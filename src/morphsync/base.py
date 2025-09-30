@@ -52,10 +52,6 @@ def _mask_and_remap(
 
 
 class FacetFrame:
-    # a base class for representing a facet complex in a 3D space
-    # a facet complex with no facets is a point cloud
-    # a facet complex with edges is a spatial network/graph
-    # a facet complex with faces (3-facets i.e. triangles) is a mesh, etc.
     def __init__(
         self,
         nodes,
@@ -75,11 +71,6 @@ class FacetFrame:
                     raise ValueError("Nodes must be an nx3 array")
             else:
                 raise ValueError("Nodes must be a DataFrame or an nx3 array")
-            # if spatial_columns is None:
-            #     if nodes.shape[1] != 3:
-            #         raise ValueError(
-            #             "If spatial_columns is not provided, nodes must have 3 columns"
-            #         )
 
         if copy:
             nodes = nodes.copy()

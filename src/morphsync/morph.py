@@ -45,7 +45,7 @@ class MorphSync:
         return {name: layer.__class__ for name, layer in self.layers.items()}
 
     def _add_layer(self, name, layer):
-        if not isinstance(name, str): 
+        if not isinstance(name, str):
             raise ValueError("Layer name must be a string.")
         self.layers[name] = layer
         self.__setattr__(name, layer)
@@ -77,9 +77,7 @@ class MorphSync:
         graph = Graph(native_graph, copy=copy, **kwargs)
         self._add_layer(name, graph)
 
-    def add_table(
-        self, name: str, table: pd.DataFrame, copy=True, **kwargs
-    ) -> None:
+    def add_table(self, name: str, table: pd.DataFrame, copy=True, **kwargs) -> None:
         table = Table(table, copy=copy, **kwargs)
         self._add_layer(name, table)
 
@@ -207,7 +205,7 @@ class MorphSync:
         target: str,
         source_index: Optional[Union[np.ndarray, pd.Index]] = None,
         validate=None,
-        null_strategy: str = "drop",
+        dropna: bool = False,
     ) -> pd.DataFrame:
         """
         Find mappings from source to target layers using the entire link graph, and
@@ -229,11 +227,9 @@ class MorphSync:
             - "one_to_many" or "1:m": check if join keys are unique in the source dataset.
             - "many_to_one" or "m:1": check if join keys are unique in the target dataset.
             - "many_to_many" or "m:m": allowed, but does not result in checks.
-        null_strategy : str, default "drop"
-            How to handle incomplete mappings:
-            - "drop": Remove rows with any null mappings
-            - "keep": Return with NaN values for missing mappings
-            - "sentinel": Use -1 for missing mappings (backward compatibility)
+        dropna : bool, default False
+            Whether to drop entries with null mappings. If False, returns NaN/pd.NA
+            values for missing mappings.
 
         Returns
         -------
@@ -271,17 +267,8 @@ class MorphSync:
         joined_mapping = joined_mapping.loc[source_index]
 
         # Apply null strategy at the end
-        match null_strategy:
-            case "drop":
-                return joined_mapping.dropna()
-            case "keep":
-                return joined_mapping  # Keep NaN/pd.NA values
-            case "sentinel":
-                return joined_mapping.fillna(-1).astype(int)  # Legacy behavior
-            case _:
-                raise ValueError(
-                    f"Unknown null_strategy: {null_strategy}. Use 'drop', 'keep', or 'sentinel'."
-                )
+        if dropna:
+            joined_mapping = joined_mapping.dropna()
 
         return joined_mapping
 
@@ -291,7 +278,7 @@ class MorphSync:
         target: str,
         source_index=None,
         validate=None,
-        null_strategy: str = "drop",
+        dropna: bool = False,
     ) -> pd.Series:
         """
         Find mappings from source to target layers using the entire link graph.
@@ -312,11 +299,9 @@ class MorphSync:
             - "one_to_many" or "1:m": check if join keys are unique in the source dataset.
             - "many_to_one" or "m:1": check if join keys are unique in the target dataset.
             - "many_to_many" or "m:m": allowed, but does not result in checks.
-        null_strategy : str, default "drop"
-            How to handle incomplete mappings:
-            - "drop": Remove entries with null mappings
-            - "keep": Return with NaN values for missing mappings
-            - "sentinel": Use -1 for missing mappings (backward compatibility)
+        dropna : bool, default False
+            Whether to drop entries with null mappings. If False, returns NaN/pd.NA
+            values for missing mappings.
 
         Returns
         -------
@@ -331,7 +316,7 @@ class MorphSync:
         each step, use `get_mapping_paths`.
         """
         mapping_path = self.get_mapping_paths(
-            source, target, source_index, validate, null_strategy
+            source, target, source_index, validate=validate, dropna=dropna
         )
         mapping = mapping_path.set_index(source)[target]
         return mapping
@@ -339,7 +324,7 @@ class MorphSync:
     def get_masking(self, source, target, source_index=None):
         """Gets any elements from another layer that map to any of source_index."""
 
-        mapping = self.get_mapping(source, target, source_index, null_strategy="drop")
+        mapping = self.get_mapping(source, target, source_index, dropna=True)
         target_ids = mapping.values
         target_ids = np.unique(target_ids)
         return target_ids
@@ -416,7 +401,7 @@ class MorphSync:
         return new_morphology
 
     def get_link_as_layer(self, source, target):
-        mapping = self.get_mapping(source, target, null_strategy="drop")
+        mapping = self.get_mapping(source, target, dropna=True)
         source_index = mapping.index
         target_index = mapping.values
         source_nodes = self.layers[source].nodes.loc[source_index]

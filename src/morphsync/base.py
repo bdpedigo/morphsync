@@ -12,15 +12,15 @@ DEFAULT_SPATIAL_COLUMNS = ["x", "y", "z"]
 def mask_and_remap(
     arr: np.ndarray,
     mask: Union[np.ndarray, list],
-):
+) -> np.ndarray:
     """Given an array in unmasked indexing and a mask,
     return the array in remapped indexing and omit rows with masked values.
 
     Parameters
     ----------
-    arr : np.ndarray
+    arr :
         NxM array of indices
-    mask : Union[np.ndarray, list
+    mask :
         1D array of indices to mask, either as a boolean mask or as a list of indices
     """
     if np.array(mask).dtype == bool:
@@ -28,7 +28,7 @@ def mask_and_remap(
     return _mask_and_remap(np.array(arr, dtype=int), mask)
 
 
-def _numpy_hash(*args, **kwargs):
+def _numpy_hash(*args, **kwargs) -> tuple:
     return tuple(hash(x) for x in args) + tuple(hash(x) for x in kwargs.items())
 
 
@@ -36,7 +36,7 @@ def _numpy_hash(*args, **kwargs):
 def _mask_and_remap(
     arr: np.ndarray,
     mask: np.ndarray,
-):
+) -> np.ndarray:
     mask_dict = {k: v for k, v in zip(mask, range(len(mask)))}
     mask_dict[-1] = -1
 
@@ -54,33 +54,33 @@ def _mask_and_remap(
 class Layer:
     def __init__(
         self,
-        nodes,
-        facets,
+        nodes: Union[pd.DataFrame, np.ndarray],
+        facets: Union[pd.DataFrame, np.ndarray],
         spatial_columns: Optional[list] = None,
         relation_columns: Optional[list] = None,
-        copy=True,
+        copy: bool = True,
         **kwargs,
     ):
         """A class for representing a set of nodes and their relationships (facets).
 
         Parameters
         ----------
-        nodes : pd.DataFrame or np.ndarray
+        nodes :
             A DataFrame or nx3 array of the nodes/vertices/points in the layer.
             If an array is provided, it must be nx3 and the columns will be named
             "x", "y", and "z" unless `spatial_columns` is provided.
-        facets : pd.DataFrame or np.ndarray
+        facets :
             A DataFrame or m x k array of the facets/edges/faces in the layer.
             Some columns must correspond to indices in `nodes`, these are specified
             by `relation_columns`.
-        spatial_columns : list, optional
+        spatial_columns :
             A list of column names in `nodes` that correspond to spatial coordinates.
             If not provided and `nodes` is a DataFrame, all columns will be used. If
             `nodes` is an array, defaults to ["x", "y", "z"].
-        relation_columns : list, optional
+        relation_columns :
             A list of column names in `facets` that correspond to indices in `nodes`.
             If not provided and `facets` is a DataFrame, all columns will be used.
-        copy : bool, default True
+        copy :
             Whether to copy the input DataFrames. If False, the input DataFrames
             may be modified in place.
         """
@@ -187,13 +187,13 @@ class Layer:
         first node in its current node index ordering"""
         return mask_and_remap(self.facets[self.relation_columns], self.nodes.index)
 
-    def query_nodes(self, query_str):
+    def query_nodes(self, query_str: str):
         """Query the nodes DataFrame and return a new layer with the
         corresponding nodes and facets.
 
         Parameters
         ----------
-        query_str : str
+        query_str :
             A query string to pass to `pd.DataFrame.query` on the nodes DataFrame.
 
         Returns
@@ -210,13 +210,13 @@ class Layer:
         new_index = new_nodes.index
         return self.mask_by_node_index(new_index, new_nodes=new_nodes)
 
-    def mask_nodes(self, mask):
+    def mask_nodes(self, mask: np.ndarray):
         """Mask the nodes DataFrame and return a new layer with the
         corresponding nodes and facets.
 
         Parameters
         ----------
-        mask : np.ndarray
+        mask :
             A boolean mask array to filter the nodes DataFrame. This masking is applied
             in positional indexing (i.e. order, not key matters).
 
@@ -234,20 +234,24 @@ class Layer:
         new_index = new_nodes.index
         return self.mask_by_node_index(new_index, new_nodes=new_nodes)
 
-    def mask_by_node_index(self, new_index, new_nodes=None):
+    def mask_by_node_index(
+        self,
+        new_index: Union[np.ndarray, pd.Index, pd.Series],
+        new_nodes: Optional[pd.DataFrame] = None,
+    ):
         """Create a new layer containing only the specified nodes and their facets.
 
         Parameters
         ----------
-        new_index : pd.Index
+        new_index :
             Index of nodes to keep in the new layer.
-        new_nodes : pd.DataFrame, optional
+        new_nodes :
             Pre-filtered nodes DataFrame. If None, nodes will be filtered automatically
             based on new_index.
 
         Returns
         -------
-        Layer
+        :
             A new layer instance containing only the specified nodes and facets that
             reference those nodes.
 

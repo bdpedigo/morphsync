@@ -1,13 +1,15 @@
+import pandas as pd
+
 from .base import Layer
 
 
 class Table(Layer):
-    def __init__(self, table, *args, **kwargs):
+    def __init__(self, table: pd.DataFrame, *args, **kwargs):
         """Initialize a Table layer.
 
         Parameters
         ----------
-        table : pd.DataFrame or tuple
+        table :
             DataFrame containing tabular data, or tuple containing the DataFrame.
         *args : tuple
             Additional arguments passed to the parent Layer class.
@@ -23,6 +25,6 @@ class Table(Layer):
         return f"Table(rows={len(self.nodes)})"
 
     @property
-    def table(self):
+    def table(self) -> pd.DataFrame:
         """Access the table data as a DataFrame. Alias for nodes."""
         return self.nodes

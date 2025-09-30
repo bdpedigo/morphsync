@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import pandas as pd
 
@@ -5,12 +7,12 @@ from .base import Layer
 
 
 class Points(Layer):
-    def __init__(self, points, *args, **kwargs):
+    def __init__(self, points: Union[np.ndarray, pd.DataFrame, tuple], *args, **kwargs):
         """Initialize a Points layer.
 
         Parameters
         ----------
-        points : np.ndarray, pd.DataFrame, or tuple
+        points :
             Point coordinates as an array, DataFrame, or tuple containing points.
             If array, should be shape (n_points, 3) or (3,) for a single point.
         *args : tuple
@@ -44,7 +46,7 @@ class Points(Layer):
     @property
     def is_spatially_valid(self) -> bool:
         """Check if the points have valid spatial structure.
-        
+
         Returns
         -------
         :

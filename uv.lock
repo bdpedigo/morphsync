@@ -703,6 +703,7 @@ dependencies = [
     { name = "cachetools" },
     { name = "fastremap" },
     { name = "joblib" },
+    { name = "networkx" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "scikit-learn" },
@@ -727,10 +728,11 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.5.1" },
     { name = "fastremap", specifier = ">=1.15.1" },
     { name = "joblib", specifier = ">=1.5.1" },
-    { name = "numpy", specifier = ">=2.3.1" },
+    { name = "networkx", specifier = ">=3.5" },
+    { name = "numpy", specifier = ">=2.0.1" },
     { name = "pandas", specifier = ">=2.3.1" },
-    { name = "scikit-learn", specifier = ">=1.7.0" },
-    { name = "scipy", specifier = ">=1.16.0" },
+    { name = "scikit-learn", specifier = ">=1.5.0" },
+    { name = "scipy", specifier = ">=1.15.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -799,6 +801,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6d/fd/91545e604bc3dad7dca9ed03284086039b294c6b3d75c0d2fa45f9e9caf3/nbformat-5.10.4.tar.gz", hash = "sha256:322168b14f937a5d11362988ecac2a4952d3d8e3a2cbeb2319584631226d5b3a", size = 142749 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a9/82/0340caa499416c78e5d8f5f05947ae4bc3cba53c9f038ab6e9ed964e22f1/nbformat-5.10.4-py3-none-any.whl", hash = "sha256:3b48d6c8fbca4b299bf3982ea7db1af21580e4fec269ad087b9e81588891200b", size = 78454 },
+]
+
+[[package]]
+name = "networkx"
+version = "3.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/4f/ccdb8ad3a38e583f214547fd2f7ff1fc160c43a75af88e6aec213404b96a/networkx-3.5.tar.gz", hash = "sha256:d4c6f9cf81f52d69230866796b82afbccdec3db7ae4fbd1b65ea750feed50037", size = 2471065 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/eb/8d/776adee7bbf76365fdd7f2552710282c79a4ead5d2a46408c9043a2b70ba/networkx-3.5-py3-none-any.whl", hash = "sha256:0030d386a9a06dee3565298b4a734b68589749a544acbb6c412dc9e2489ec6ec", size = 2034406 },
 ]
 
 [[package]]

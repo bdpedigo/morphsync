@@ -1,3 +1,5 @@
+from typing import Any, Optional, Union
+
 import numpy as np
 import pandas as pd
 
@@ -5,12 +7,14 @@ from .base import Layer
 
 
 class Graph(Layer):
-    def __init__(self, graph, *args, **kwargs):
+    def __init__(
+        self, graph: Union[tuple[np.ndarray, np.ndarray], Any], *args, **kwargs
+    ):
         """Initialize a Graph layer.
 
         Parameters
         ----------
-        graph : object or tuple
+        graph :
             Either an object with 'vertices' and 'edges' attributes, or a tuple
             of (vertices, edges).
         *args : tuple
@@ -26,7 +30,7 @@ class Graph(Layer):
         super().__init__(vertices, edges, *args, **kwargs)
         self._graph = graph
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Return a string representation of the Graph."""
         return f"Graph(nodes={self.nodes.shape}, edges={self.edges.shape})"
 
@@ -54,21 +58,26 @@ class Graph(Layer):
         """Edges in positional indexing."""
         return np.vectorize(self.nodes.index.get_loc)(self.edges)
 
-    def to_adjacency(self, return_as="csr", weights=None, symmetrize=False):
+    def to_adjacency(
+        self,
+        return_as: str = "csr",
+        weights: Optional[str] = None,
+        symmetrize: bool = False,
+    ):
         """Convert the graph to an adjacency matrix.
 
         Parameters
         ----------
-        return_as : str, default "csr"
+        return_as :
             Format to return the adjacency matrix. Currently only "csr" is supported.
-        weights : str, optional
+        weights :
             Column name in facets to use as edge weights. If None, uses unit weights.
-        symmetrize : bool, default False
+        symmetrize :
             If True, add reverse edges to make the graph symmetric.
 
         Returns
         -------
-        scipy.sparse.csr_array
+        :
             Sparse adjacency matrix of shape (n_nodes, n_nodes).
         """
         if return_as == "csr":
@@ -96,12 +105,12 @@ class Graph(Layer):
             raise ValueError(f"Unsupported return_as format {return_as}")
 
     @property
-    def is_spatially_valid(self):
+    def is_spatially_valid(self) -> bool:
         """Check if the graph has valid spatial structure.
 
         Returns
         -------
-        bool
+        :
             True if vertices are 3D and both vertices and edges are non-empty.
         """
         is_valid = self.vertices.shape[1] == 3 and self.vertices.shape[0] > 0

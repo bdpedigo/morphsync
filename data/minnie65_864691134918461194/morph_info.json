@@ -1,0 +1,96 @@
+{
+    "name": 864691134918461194,
+    "layers": {
+        "level2_skeleton": {
+            "layer_type": "graph",
+            "spatial_columns": [
+                "x",
+                "y",
+                "z"
+            ],
+            "relation_columns": [
+                "source",
+                "target"
+            ]
+        },
+        "level2_nodes": {
+            "layer_type": "points",
+            "spatial_columns": [
+                "rep_coord_nm_x",
+                "rep_coord_nm_y",
+                "rep_coord_nm_z"
+            ],
+            "relation_columns": []
+        },
+        "mesh": {
+            "layer_type": "mesh",
+            "spatial_columns": [
+                "x",
+                "y",
+                "z"
+            ],
+            "relation_columns": [
+                0,
+                1,
+                2
+            ]
+        },
+        "pre_synapses": {
+            "layer_type": "points",
+            "spatial_columns": [
+                "ctr_pt_position_x",
+                "ctr_pt_position_y",
+                "ctr_pt_position_z"
+            ],
+            "relation_columns": []
+        },
+        "post_synapses": {
+            "layer_type": "points",
+            "spatial_columns": [
+                "ctr_pt_position_x",
+                "ctr_pt_position_y",
+                "ctr_pt_position_z"
+            ],
+            "relation_columns": []
+        },
+        "segclr": {
+            "layer_type": "points",
+            "spatial_columns": [
+                "x",
+                "y",
+                "z"
+            ],
+            "relation_columns": []
+        }
+    },
+    "links": [
+        {
+            "source": "level2_nodes",
+            "target": "level2_skeleton"
+        },
+        {
+            "source": "level2_nodes",
+            "target": "pre_synapses"
+        },
+        {
+            "source": "level2_nodes",
+            "target": "post_synapses"
+        },
+        {
+            "source": "level2_nodes",
+            "target": "mesh"
+        },
+        {
+            "source": "mesh",
+            "target": "post_synapses"
+        },
+        {
+            "source": "mesh",
+            "target": "pre_synapses"
+        },
+        {
+            "source": "level2_nodes",
+            "target": "segclr"
+        }
+    ]
+}

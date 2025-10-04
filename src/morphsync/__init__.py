@@ -1,3 +1,7 @@
+import importlib.metadata
+
+__version__ = importlib.metadata.version("morphsync")
+
 from .graph import Graph
 from .mesh import Mesh
 from .morph import MorphSync

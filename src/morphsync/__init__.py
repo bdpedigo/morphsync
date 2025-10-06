@@ -9,4 +9,4 @@ from .morph import MorphSync
 from .points import Points
 from .table import Table
 
-__all__ = ["MorphSync", "Mesh", "Points", "Graph", "Table", "Layer"]
+__all__ = ["MorphSync", "Mesh", "Points", "Graph", "Table", "Layer", "__version__"]

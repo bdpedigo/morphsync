@@ -1,12 +1,14 @@
 import pooch
 
 from . import __version__ as version
+from .io import load_morphsync
+from .morph import MorphSync
 
 __all__ = ["fetch_minnie_sample"]
 
-minnie_data = pooch.create(
+_minnie_data = pooch.create(
     path=pooch.os_cache("morphsync"),
-    base_url="https://github.com/bdpedigo/morphsync/raw/{version}/data/minnie65_864691134918461194/",
+    base_url="https://github.com/bdpedigo/morphsync/raw/v{version}/data/minnie65_864691134918461194/",
     version=version,
     registry={
         "layers/level2_nodes_nodes.csv.gz": "sha256:8a2d189db2c9e5789b672cee88fac4d6a50d6e68e85f988d6a00ea0cfd42bda7",
@@ -29,14 +31,25 @@ minnie_data = pooch.create(
 )
 
 
-def fetch_minnie_sample():
+def fetch_minnie_sample() -> MorphSync:
     """Fetch the Minnie sample neuron.
 
     Returns
     -------
-    str
-        Path to the downloaded dataset.
+    :
+        The Minnie sample neuron as a MorphSync object.
+
+    Notes
+    -----
+    The sample neuron contains the following layers:
+    - level2_nodes: The level 2 segmentation nodes
+    - level2_skeleton: The level 2 skeleton
+    - mesh: The mesh of the neuron
+    - pre_synapses: The presynaptic sites
+    - post_synapses: The postsynaptic sites
+    - segclr: The morphological embeddings
     """
-    # return minnie_data.fetch("minnie_mouse.zip", processor=pooch.Unzip())
-    path = minnie_data.fetch("morph_info.json")
-    print(path)
+    for file_name in _minnie_data.registry_files:
+        _minnie_data.fetch(file_name)
+    path = _minnie_data.abspath
+    return load_morphsync(path)

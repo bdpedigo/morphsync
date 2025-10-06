@@ -57,7 +57,6 @@ def load_morphsync(path: Union[Path, str]) -> MorphSync:
                 link_info["source"],
                 link_info["target"],
                 mapping=mapping,
-                reciprocal=True,
             )
         else:
             continue
